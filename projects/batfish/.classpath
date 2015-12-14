@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/logicblox/lb-common-protocol.jar"/>
+	<classpathentry kind="lib" path="lib/logicblox/lb-common.jar"/>
+	<classpathentry kind="lib" path="lib/logicblox/lb-connectblox.jar"/>
+	<classpathentry kind="lib" path="lib/logicblox/lb-web-client.jar"/>
+	<classpathentry kind="lib" path="lib/antlr/antlr-4.4-complete.jar"/>
+	<classpathentry kind="lib" path="lib/commons/commons-codec-1.6.jar"/>
+	<classpathentry kind="lib" path="lib/commons/commons-configuration-1.8.jar"/>
+	<classpathentry kind="lib" path="lib/commons/commons-io-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/commons/commons-lang-2.6.jar"/>
+	<classpathentry kind="lib" path="lib/commons/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/eclipse/jetty-client-7.6.7.v20120910.jar"/>
+	<classpathentry kind="lib" path="lib/eclipse/jetty-http-7.6.7.v20120910.jar"/>
+	<classpathentry kind="lib" path="lib/eclipse/jetty-io-7.6.7.v20120910.jar"/>
+	<classpathentry kind="lib" path="lib/eclipse/jetty-util-7.6.7.v20120910.jar"/>
+	<classpathentry kind="lib" path="lib/guava/guava-15.0.jar"/>
+	<classpathentry kind="lib" path="lib/httpcomponents/fluent-hc-4.2.5.jar"/>
+	<classpathentry kind="lib" path="lib/httpcomponents/httpclient-4.2.5.jar"/>
+	<classpathentry kind="lib" path="lib/httpcomponents/httpclient-cache-4.2.5.jar"/>
+	<classpathentry kind="lib" path="lib/httpcomponents/httpcore-4.2.4.jar"/>
+	<classpathentry kind="lib" path="lib/httpcomponents/httpmime-4.2.5.jar"/>
+	<classpathentry kind="lib" path="lib/protobuf/protobuf-2.5.0.jar"/>
+	<classpathentry kind="lib" path="lib/xstream/xstream-1.4.7.jar"/>
+	<classpathentry kind="lib" path="lib/log4j/log4j-api-2.1.jar" sourcepath="lib/log4j/log4j-api-2.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/log4j/log4j-core-2.1.jar" sourcepath="lib/log4j/log4j-core-2.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/commons/commons-cli-1.3-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib/z3/com.microsoft.z3.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
