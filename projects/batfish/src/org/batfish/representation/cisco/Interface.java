@@ -6,7 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.batfish.representation.Ip;
+import org.batfish.representation.IsisInterfaceMode;
 import org.batfish.representation.Prefix;
 import org.batfish.representation.SwitchportEncapsulationType;
 import org.batfish.representation.SwitchportMode;
@@ -19,10 +19,12 @@ public class Interface implements Serializable {
    private static final double FAST_ETHERNET_BANDWIDTH = 100E6;
 
    private static final double GIGABIT_ETHERNET_BANDWIDTH = 1E9;
+
    /**
     * dirty hack: just chose a very large number
     */
    private static final double LOOPBACK_BANDWIDTH = 1E12;
+
    private static final long serialVersionUID = 1L;
 
    private static final double TEN_GIGABIT_ETHERNET_BANDWIDTH = 10E9;
@@ -56,15 +58,15 @@ public class Interface implements Serializable {
 
    private ArrayList<SubRange> _allowedVlans;
 
-   private Integer _area;
-
    private Double _bandwidth;
 
    private String _description;
 
    private String _incomingFilter;
 
-   private Ip _ip;
+   private Integer _isisCost;
+
+   private IsisInterfaceMode _isisInterfaceMode;
 
    private String _name;
 
@@ -78,11 +80,11 @@ public class Interface implements Serializable {
 
    private String _outgoingFilter;
 
+   private Prefix _prefix;
+
    private String _routingPolicy;
 
    private Set<Prefix> _secondaryPrefixes;
-
-   private Ip _subnet;
 
    private SwitchportMode _switchportMode;
 
@@ -92,14 +94,12 @@ public class Interface implements Serializable {
 
    public Interface(String name) {
       _name = name;
-      _area = null;
-      _ip = null;
       _active = true;
       _nativeVlan = 1;
       _switchportMode = SwitchportMode.NONE;
       _allowedVlans = new ArrayList<SubRange>();
-      _ospfCost = null;
       _secondaryPrefixes = new LinkedHashSet<Prefix>();
+      _isisInterfaceMode = IsisInterfaceMode.UNSET;
    }
 
    public void addAllowedRanges(List<SubRange> ranges) {
@@ -118,10 +118,6 @@ public class Interface implements Serializable {
       return _allowedVlans;
    }
 
-   public Integer getArea() {
-      return _area;
-   }
-
    public Double getBandwidth() {
       return _bandwidth;
    }
@@ -134,8 +130,12 @@ public class Interface implements Serializable {
       return _incomingFilter;
    }
 
-   public Ip getIP() {
-      return _ip;
+   public Integer getIsisCost() {
+      return _isisCost;
+   }
+
+   public IsisInterfaceMode getIsisInterfaceMode() {
+      return _isisInterfaceMode;
    }
 
    public String getName() {
@@ -162,16 +162,16 @@ public class Interface implements Serializable {
       return _outgoingFilter;
    }
 
+   public Prefix getPrefix() {
+      return _prefix;
+   }
+
    public String getRoutingPolicy() {
       return _routingPolicy;
    }
 
    public Set<Prefix> getSecondaryPrefixes() {
       return _secondaryPrefixes;
-   }
-
-   public Ip getSubnetMask() {
-      return _subnet;
    }
 
    public SwitchportMode getSwitchportMode() {
@@ -206,8 +206,12 @@ public class Interface implements Serializable {
       _incomingFilter = accessListName;
    }
 
-   public void setIp(Ip ip) {
-      _ip = ip;
+   public void setIsisCost(Integer isisCost) {
+      _isisCost = isisCost;
+   }
+
+   public void setIsisInterfaceMode(IsisInterfaceMode mode) {
+      _isisInterfaceMode = mode;
    }
 
    public void setNativeVlan(int vlan) {
@@ -218,11 +222,11 @@ public class Interface implements Serializable {
       _ospfCost = ospfCost;
    }
 
-   public void setOSPFDeadInterval(int seconds) {
+   public void setOspfDeadInterval(int seconds) {
       _ospfDeadInterval = seconds;
    }
 
-   public void setOSPFHelloMultiplier(int multiplier) {
+   public void setOspfHelloMultiplier(int multiplier) {
       _ospfHelloMultiplier = multiplier;
    }
 
@@ -230,12 +234,12 @@ public class Interface implements Serializable {
       _outgoingFilter = accessListName;
    }
 
-   public void setRoutingPolicy(String routingPolicy) {
-      _routingPolicy = routingPolicy;
+   public void setPrefix(Prefix prefix) {
+      _prefix = prefix;
    }
 
-   public void setSubnetMask(Ip subnet) {
-      _subnet = subnet;
+   public void setRoutingPolicy(String routingPolicy) {
+      _routingPolicy = routingPolicy;
    }
 
    public void setSwitchportMode(SwitchportMode switchportMode) {

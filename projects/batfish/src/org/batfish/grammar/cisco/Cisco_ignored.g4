@@ -11,54 +11,31 @@ null_block_stanza
    NO?
    (
       AAA
+      | ACCESS_GROUP
       | ARCHIVE
       | ATM
       | BASH
+      | BFD
+      | CEF
       | CHAT_SCRIPT
       | CLASS_MAP
       | CLI
+      | CONFDCONFIG
+      | CONFIGURATION
       | CONTROL_PLANE
       | CONTROLLER
       | COPY
       | CRYPTO
-      //      (
-      //         CRYPTO
-      //         (
-      //            CA
-      //            | IPSEC
-      //            |
-      //            (
-      //               ISAKMP
-      //               (
-      //                  ENABLE
-      //                  | INVALID_SPI_RECOVERY
-      //                  | KEY
-      //                  | PEER
-      //                  | POLICY
-      //                  | PROFILE
-      //               )
-      //            )
-      //            | KEY
-      //            | KEYRING
-      //            | MAP
-      //            | PKI
-      //         )
-      //      )
-
       | DIAL_PEER
+      | DOMAIN
+      | END
       | EVENT_HANDLER
       | FEX
-      |
-      (
-         FLOW
-         (
-            EXPORTER
-            | MONITOR
-            | RECORD
-         )
-      )
+      | FLOW
+      | FPD
       | GATEKEEPER
       | GATEWAY
+      | GROUP
       | GROUP_POLICY
       |
       (
@@ -73,6 +50,10 @@ null_block_stanza
             | DHCP
             | FLOW_TOP_TALKERS
             | INSPECT
+            |
+            (
+               OSPF NAME_LOOKUP
+            )
             | POLICY_LIST
             | SLA
             | SOURCE
@@ -86,9 +67,21 @@ null_block_stanza
       | IPC
       |
       (
+         IPV4
+         (
+            ASSEMBLER
+            | CONFLICT_POLICY
+            | HARDWARE
+            | UNNUMBERED
+            | VIRTUAL
+         )
+      )
+      |
+      (
          IPV6
          (
             ACCESS_LIST
+            | CONFLICT_POLICY
             | HARDWARE
          )
       )
@@ -96,6 +89,7 @@ null_block_stanza
       | KRON
       | L2TP_CLASS
       | LINE
+      | LOGGING
       | MAC
       | MAC_LEARN
       | MANAGEMENT
@@ -104,7 +98,18 @@ null_block_stanza
       | MLAG
       | MODULE
       | MONITOR
+      |
+      (
+         MPLS
+         (
+            (
+               LDP ~NEWLINE
+            )
+            | OAM
+         )
+      )
       | NO_BANNER
+      | NSR
       | ONE
       | OPENFLOW
       | PLAT
@@ -117,17 +122,20 @@ null_block_stanza
       | ROLE
       | SAMPLER
       | SCCP
+      | SDR
       | SFLOW
       | SPANNING_TREE
       | STCAPP
       | SVCLC
       | TACACS
       | TACACS_SERVER
+      | TCP
       | TEMPLATE
       | TERMINAL
       | TRACE
       | TRACK
       | TRANSCEIVER
+      | USERGROUP
       | VDC
       |
       (
@@ -152,7 +160,9 @@ null_block_substanza
       (
          ABSOLUTE_TIMEOUT
          | ACCEPT_DIALIN
+         | ACCEPT_LIFETIME
          | ACCESS_CLASS
+         | ACCOUNTING
          | ACCOUNTING_SERVER_GROUP
          | ACTION
          | ACTIVATION_CHARACTER
@@ -161,6 +171,8 @@ null_block_substanza
          | ADMINISTRATIVE_WEIGHT
          | AESA
          | ANYCONNECT
+         | ARCHIVE_LENGTH
+         | ARCHIVE_SIZE
          | ASSOCIATE
          | ASSOCIATION
          | AUTHENTICATION
@@ -189,11 +201,14 @@ null_block_substanza
          | CLIENT_GROUP
          | CLOCK
          | COLLECT
+         | COMMAND
          | CONFORM_ACTION
          | CONGESTION_CONTROL
+         | CONTEXT
          | CPTONE
          | CREDENTIALS
          | CRL
+         | CRYPTOGRAPHIC_ALGORITHM
          | DATABITS
          | DBL
          | DEFAULT_ACTION
@@ -204,14 +219,18 @@ null_block_substanza
          | DENY
          | DESCRIPTION
          | DESTINATION
+         | DEVICE
          | DIAGNOSTIC
          | DNS_SERVER
          | DOMAIN_ID
          | DROP
          | DS0_GROUP
          | DOMAIN_NAME
+         | ECHO
          | ENCAPSULATION
          | ENCRYPTION
+         | END_CLASS_MAP
+         | END_POLICY_MAP
          | ENROLLMENT
          | ERSPAN_ID
          | ESCAPE_CHARACTER
@@ -230,12 +249,15 @@ null_block_substanza
          | FALLBACK_DN
          | FILE_BROWSING
          | FILE_ENTRY
+         | FILE_SIZE
          | FLUSH_AT_ACTIVATION
          | FQDN
          | FRAMING
          | FREQUENCY
          | FT
          | GATEWAY
+         | GID
+         | GROUP
          | GROUP_ALIAS
          | GROUP_POLICY
          | GROUP_URL
@@ -245,6 +267,7 @@ null_block_substanza
          | HIDEKEYS
          | HIGH_AVAILABILITY
          | HISTORY
+         | HOMEDIR
          | ICMP_ECHO
          | IDLE
          | IDLE_TIMEOUT
@@ -278,6 +301,7 @@ null_block_substanza
          | KEEPALIVE_ENABLE
          | KEY_STRING
          | KEYPAIR
+         | KEYPATH
          | KEYRING
          | L2TP
          | LEASE
@@ -293,14 +317,17 @@ null_block_substanza
          | LOG
          | LOGGING
          | LOGIN
+         | LPTS
          | MAIN_CPU
          | MATCH
          | MAXIMUM
          | MESSAGE_LENGTH
          | MODE
          | MODEM
+         | MONITORING
          | MTU
          | NAME
+         | NAMESPACE
          | NAT
          | NATPOOL
          | NEGOTIATE
@@ -309,6 +336,7 @@ null_block_substanza
          | NOTIFY
          | OBJECT
          | OPEN
+         | OPS
          | PARAMETERS
          | PARENT
          | PARITY
@@ -359,6 +387,7 @@ null_block_substanza
          | REMOVED
          | REQUEST
          | REQUEST_DATA_SIZE
+         | RESOURCES
          | RETRANSMIT
          | RETRIES
          | REVERSE_ROUTE
@@ -370,6 +399,8 @@ null_block_substanza
          | ROUTE_TARGET
          | RULE
          | SCHEME
+         | SECRET
+         | SEND_LIFETIME
          | SEQUENCE
          | SERVER
          | SERVERFARM
@@ -381,9 +412,11 @@ null_block_substanza
          | SESSION_LIMIT
          | SESSION_TIMEOUT
          | SET
+         | SEVERITY
          | SHAPE
          | SHUT
          | SHUTDOWN
+         | SINGLE_CONNECTION
          | SINGLE_ROUTER_MODE
          | SORT_BY
          | SOURCE
@@ -391,6 +424,7 @@ null_block_substanza
          | SPEED
          | SPLIT_TUNNEL_NETWORK_LIST
          | SPLIT_TUNNEL_POLICY
+         | SSH_KEYDIR
          | STICKY
          | STOPBITS
          | STP
@@ -400,6 +434,7 @@ null_block_substanza
          | SYNC
          | SYSTEM_PRIORITY
          | TAG
+         | TASKGROUP
          | TB_VLAN1
          | TB_VLAN2
          | TCP_CONNECT
@@ -408,6 +443,7 @@ null_block_substanza
          | TIMEOUT
          | TIMEOUTS
          | TIMER
+         | TIMESTAMP
          | TIMING
          | TOP
          | TOS
@@ -418,14 +454,20 @@ null_block_substanza
          | TUNNEL
          | TUNNEL_GROUP
          | UDP_JITTER
+         | UID
+         | UPDATE_CALENDAR
          | USE_VRF
+         | USERS
          | VIOLATE_ACTION
          | VIRTUAL
          | VIRTUAL_TEMPLATE
+         | VM_CPU
+         | VM_MEMORY
          | VPN_FILTER
          | VPN_IDLE_TIMEOUT
          | VPN_TUNNEL_PROTOCOL
          | VSERVER
+         | VTY_POOL
          | WEBVPN
          | WINS_SERVER
          | WITHOUT_CSD
@@ -460,10 +502,8 @@ null_standalone_stanza_DEPRECATED_DO_NOT_ADD_ITEMS
       NO
    )?
    (
-      AAA
-      | AAA_SERVER
+      AAA_SERVER
       | ABSOLUTE_TIMEOUT
-      | ACCESS_GROUP
       |
       (
          ACCESS_LIST
@@ -550,7 +590,6 @@ null_standalone_stanza_DEPRECATED_DO_NOT_ADD_ITEMS
       | FQDN
       | FTP
       | FTP_SERVER
-      | GROUP
       | GROUP_OBJECT
       | HARDWARE
       | HASH
@@ -604,10 +643,6 @@ null_standalone_stanza_DEPRECATED_DO_NOT_ADD_ITEMS
             | MULTICAST_ROUTING
             | NAME_SERVER
             | NAT
-            |
-            (
-               OSPF NAME_LOOKUP
-            )
             | PIM
             | RADIUS
             | RCMD
@@ -663,7 +698,6 @@ null_standalone_stanza_DEPRECATED_DO_NOT_ADD_ITEMS
       | LIFETIME
       | LLDP
       | LOCATION
-      | LOGGING
       | MAC_ADDRESS_TABLE
       | MAIL_SERVER
       | MAXIMUM
@@ -674,7 +708,6 @@ null_standalone_stanza_DEPRECATED_DO_NOT_ADD_ITEMS
       | MLS
       | MODE
       | MODEM
-      | MPLS
       | MTA
       | MTU
       | MULTILINK

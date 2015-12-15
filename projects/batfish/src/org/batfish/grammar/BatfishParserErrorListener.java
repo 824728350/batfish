@@ -8,10 +8,12 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.Token;
-import org.batfish.main.BatfishException;
+import org.batfish.common.BatfishException;
 import org.batfish.util.Util;
 
 public class BatfishParserErrorListener extends BatfishGrammarErrorListener {
+
+   private static final int MAX_LOOKBACK = 10;
 
    public BatfishParserErrorListener(String grammarName,
          BatfishCombinedParser<?, ?> parser) {
@@ -32,7 +34,8 @@ public class BatfishParserErrorListener extends BatfishGrammarErrorListener {
          tokenName = "EOF";
       }
       else {
-         tokenName = _combinedParser.getParser().getTokenNames()[tokenType];
+         tokenName = _combinedParser.getParser().getVocabulary()
+               .getSymbolicName(tokenType);
          tokenText = "'" + tokenText + "'";
       }
       return " line " + line + ":" + col + " " + channel + " " + tokenName
@@ -48,6 +51,7 @@ public class BatfishParserErrorListener extends BatfishGrammarErrorListener {
       String ruleStack = ctx.toString(ruleNames);
       List<Token> tokens = _combinedParser.getTokens().getTokens();
       int startTokenIndex = parser.getInputStream().index();
+      int lookbackIndex = Math.max(0, startTokenIndex - MAX_LOOKBACK);
       int endTokenIndex = tokens.size();
       StringBuilder sb = new StringBuilder();
       sb.append("parser: " + _grammarName + ": line " + line + ":"
@@ -57,11 +61,22 @@ public class BatfishParserErrorListener extends BatfishGrammarErrorListener {
       sb.append("Offending Token: " + offendingTokenText + "\n");
       sb.append("Error parsing top (leftmost) parser rule in stack: '"
             + ruleStack + "'.\n");
+      String ctxParseTree = ParseTreePrettyPrinter.print(ctx, _combinedParser);
+      sb.append("Parse tree of current rule:\n" + ctxParseTree + "\n");
       sb.append("Unconsumed tokens:\n");
       for (int i = startTokenIndex; i < endTokenIndex; i++) {
          Token token = tokens.get(i);
          String tokenText = printToken(token);
          sb.append(tokenText + "\n");
+      }
+      if (lookbackIndex < startTokenIndex) {
+         int numLookbackTokens = startTokenIndex - lookbackIndex;
+         sb.append("Previous " + numLookbackTokens + " tokens:\n");
+         for (int i = lookbackIndex; i < startTokenIndex; i++) {
+            Token lookbackToken = tokens.get(i);
+            String tokenText = printToken(lookbackToken);
+            sb.append(tokenText + "\n");
+         }
       }
       if (offendingToken.getType() == Token.EOF) {
          sb.append("Lexer mode at EOF: " + _combinedParser.getLexer().getMode()

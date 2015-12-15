@@ -1,10 +1,11 @@
 package org.batfish.representation;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
+import org.batfish.main.ConfigurationFormat;
 import org.batfish.util.NamedStructure;
 import org.batfish.util.SubRange;
 
@@ -13,37 +14,59 @@ public class Interface extends NamedStructure {
    private static final long serialVersionUID = 1L;
 
    private int _accessVlan;
+
    private boolean _active;
+
    private ArrayList<SubRange> _allowedVlans;
+
+   private final Set<Prefix> _allPrefixes;
+
    private Double _bandwidth;
+
    private String _description;
+
    private IpAccessList _incomingFilter;
-   private Ip _ip;
+
+   private Integer _isisCost;
+
+   private IsisInterfaceMode _isisL1InterfaceMode;
+
+   private IsisInterfaceMode _isisL2InterfaceMode;
+
    private int _nativeVlan;
-   private Integer _ospfArea;
+
+   private OspfArea _ospfArea;
+
    private Integer _ospfCost;
+
    private int _ospfDeadInterval;
+
+   private boolean _ospfEnabled;
+
    private int _ospfHelloMultiplier;
+
+   private boolean _ospfPassive;
+
    private IpAccessList _outgoingFilter;
+
+   private Prefix _prefix;
+
    private PolicyMap _routingPolicy;
-   private Set<Prefix> _secondaryPrefixes;
-   private Ip _subnet;
+
+   private final Set<Prefix> _secondaryPrefixes;
+
    private SwitchportMode _switchportMode;
 
    private SwitchportEncapsulationType _switchportTrunkEncapsulation;
 
    public Interface(String name) {
       super(name);
-      _ip = null;
       _active = true;
+      _allPrefixes = new TreeSet<Prefix>();
       _nativeVlan = 1;
       _switchportMode = SwitchportMode.NONE;
       _allowedVlans = new ArrayList<SubRange>();
-      _ospfCost = null;
-      _ospfArea = null;
-      _incomingFilter = null;
-      _outgoingFilter = null;
-      _secondaryPrefixes = new HashSet<Prefix>();
+      _secondaryPrefixes = new TreeSet<Prefix>();
    }
 
    public void addAllowedRanges(List<SubRange> ranges) {
@@ -62,8 +85,8 @@ public class Interface extends NamedStructure {
       return _allowedVlans;
    }
 
-   public Integer getArea() {
-      return _ospfArea;
+   public Set<Prefix> getAllPrefixes() {
+      return _allPrefixes;
    }
 
    public double getBandwidth() {
@@ -78,12 +101,24 @@ public class Interface extends NamedStructure {
       return _incomingFilter;
    }
 
-   public Ip getIP() {
-      return _ip;
+   public Integer getIsisCost() {
+      return _isisCost;
+   }
+
+   public IsisInterfaceMode getIsisL1InterfaceMode() {
+      return _isisL1InterfaceMode;
+   }
+
+   public IsisInterfaceMode getIsisL2InterfaceMode() {
+      return _isisL2InterfaceMode;
    }
 
    public int getNativeVlan() {
       return _nativeVlan;
+   }
+
+   public OspfArea getOspfArea() {
+      return _ospfArea;
    }
 
    public Integer getOspfCost() {
@@ -94,12 +129,24 @@ public class Interface extends NamedStructure {
       return _ospfDeadInterval;
    }
 
+   public boolean getOspfEnabled() {
+      return _ospfEnabled;
+   }
+
    public int getOspfHelloMultiplier() {
       return _ospfHelloMultiplier;
    }
 
+   public boolean getOspfPassive() {
+      return _ospfPassive;
+   }
+
    public IpAccessList getOutgoingFilter() {
       return _outgoingFilter;
+   }
+
+   public Prefix getPrefix() {
+      return _prefix;
    }
 
    public PolicyMap getRoutingPolicy() {
@@ -110,10 +157,6 @@ public class Interface extends NamedStructure {
       return _secondaryPrefixes;
    }
 
-   public Ip getSubnetMask() {
-      return _subnet;
-   }
-
    public SwitchportMode getSwitchportMode() {
       return _switchportMode;
    }
@@ -122,16 +165,22 @@ public class Interface extends NamedStructure {
       return _switchportTrunkEncapsulation;
    }
 
+   public boolean isLoopback(ConfigurationFormat vendor) {
+      if (vendor == ConfigurationFormat.JUNIPER
+            || vendor == ConfigurationFormat.FLAT_JUNIPER) {
+         if (!_name.contains(".")) {
+            return false;
+         }
+      }
+      return _name.toLowerCase().startsWith("lo");
+   }
+
    public void setAccessVlan(int vlan) {
       _accessVlan = vlan;
    }
 
    public void setActive(boolean active) {
       _active = active;
-   }
-
-   public void setArea(Integer area) {
-      _ospfArea = area;
    }
 
    public void setBandwidth(Double bandwidth) {
@@ -146,12 +195,24 @@ public class Interface extends NamedStructure {
       _incomingFilter = filter;
    }
 
-   public void setIp(Ip ip) {
-      _ip = ip;
+   public void setIsisCost(Integer isisCost) {
+      _isisCost = isisCost;
+   }
+
+   public void setIsisL1InterfaceMode(IsisInterfaceMode mode) {
+      _isisL1InterfaceMode = mode;
+   }
+
+   public void setIsisL2InterfaceMode(IsisInterfaceMode mode) {
+      _isisL2InterfaceMode = mode;
    }
 
    public void setNativeVlan(int vlan) {
       _nativeVlan = vlan;
+   }
+
+   public void setOspfArea(OspfArea ospfArea) {
+      _ospfArea = ospfArea;
    }
 
    public void setOspfCost(Integer ospfCost) {
@@ -162,20 +223,28 @@ public class Interface extends NamedStructure {
       _ospfDeadInterval = seconds;
    }
 
+   public void setOspfEnabled(boolean b) {
+      _ospfEnabled = b;
+   }
+
    public void setOspfHelloMultiplier(int multiplier) {
       _ospfHelloMultiplier = multiplier;
+   }
+
+   public void setOspfPassive(boolean passive) {
+      _ospfPassive = passive;
    }
 
    public void setOutgoingFilter(IpAccessList filter) {
       _outgoingFilter = filter;
    }
 
-   public void setRoutingPolicy(PolicyMap policy) {
-      _routingPolicy = policy;
+   public void setPrefix(Prefix prefix) {
+      _prefix = prefix;
    }
 
-   public void setSubnetMask(Ip subnet) {
-      _subnet = subnet;
+   public void setRoutingPolicy(PolicyMap policy) {
+      _routingPolicy = policy;
    }
 
    public void setSwitchportMode(SwitchportMode switchportMode) {

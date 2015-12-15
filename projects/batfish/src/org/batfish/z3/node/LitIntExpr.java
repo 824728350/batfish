@@ -1,6 +1,11 @@
 package org.batfish.z3.node;
 
 import org.batfish.representation.Ip;
+import org.batfish.z3.NodProgram;
+
+import com.microsoft.z3.BitVecExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Z3Exception;
 
 public class LitIntExpr extends IntExpr {
 
@@ -56,6 +61,13 @@ public class LitIntExpr extends IntExpr {
          }
       }
       _printer = new SimpleExprPrinter(_numString);
+   }
+
+   @Override
+   public BitVecExpr toBitVecExpr(NodProgram nodProgram) throws Z3Exception {
+      Context ctx = nodProgram.getContext();
+      BitVecExpr result = ctx.mkBV(_num, _bits);
+      return result;
    }
 
 }

@@ -2,11 +2,15 @@ package org.batfish.representation.juniper;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.batfish.representation.Ip;
+import org.batfish.representation.IsoAddress;
 import org.batfish.representation.Prefix;
 import org.batfish.representation.SwitchportEncapsulationType;
 import org.batfish.representation.SwitchportMode;
@@ -16,7 +20,7 @@ public class Interface implements Serializable {
 
    private static final long serialVersionUID = 1L;
 
-   private static double getDefaultBandwidthByName(String name) {
+   public static double getDefaultBandwidthByName(String name) {
       if (name.startsWith("xe")) {
          return 1E10;
       }
@@ -35,17 +39,25 @@ public class Interface implements Serializable {
 
    private boolean _active;
 
-   private ArrayList<SubRange> _allowedVlans;
+   private final ArrayList<SubRange> _allowedVlans;
+
+   private final Set<Prefix> _allPrefixes;
+
+   private final Set<Ip> _allPrefixIps;
 
    private double _bandwidth;
 
    private String _incomingFilter;
 
+   private final IsisInterfaceSettings _isisSettings;
+
+   private IsoAddress _isoAddress;
+
    private String _name;
 
    private int _nativeVlan;
 
-   private Ip _ospfArea;
+   private Ip _ospfActiveArea;
 
    private Integer _ospfCost;
 
@@ -53,26 +65,32 @@ public class Interface implements Serializable {
 
    private int _ospfHelloMultiplier;
 
-   private boolean _ospfPassive;
+   private final Set<Ip> _ospfPassiveAreas;
 
    private String _outgoingFilter;
 
-   private Prefix _prefix;
+   private Prefix _preferredPrefix;
+
+   private Prefix _primaryPrefix;
 
    private SwitchportMode _switchportMode;
 
    private SwitchportEncapsulationType _switchportTrunkEncapsulation;
 
-   private Map<String, Interface> _units;
+   private final Map<String, Interface> _units;
 
    public Interface(String name) {
       _name = name;
       _active = true;
+      _allPrefixes = new LinkedHashSet<Prefix>();
+      _allPrefixIps = new LinkedHashSet<Ip>();
       _bandwidth = getDefaultBandwidthByName(name);
+      _isisSettings = new IsisInterfaceSettings();
       _nativeVlan = 1;
       _switchportMode = SwitchportMode.NONE;
       _allowedVlans = new ArrayList<SubRange>();
       _ospfCost = null;
+      _ospfPassiveAreas = new HashSet<Ip>();
       _units = new TreeMap<String, Interface>();
    }
 
@@ -92,12 +110,28 @@ public class Interface implements Serializable {
       return _allowedVlans;
    }
 
+   public Set<Prefix> getAllPrefixes() {
+      return _allPrefixes;
+   }
+
+   public Set<Ip> getAllPrefixIps() {
+      return _allPrefixIps;
+   }
+
    public double getBandwidth() {
       return _bandwidth;
    }
 
    public String getIncomingFilter() {
       return _incomingFilter;
+   }
+
+   public IsisInterfaceSettings getIsisSettings() {
+      return _isisSettings;
+   }
+
+   public IsoAddress getIsoAddress() {
+      return _isoAddress;
    }
 
    public String getName() {
@@ -108,8 +142,8 @@ public class Interface implements Serializable {
       return _nativeVlan;
    }
 
-   public Ip getOspfArea() {
-      return _ospfArea;
+   public Ip getOspfActiveArea() {
+      return _ospfActiveArea;
    }
 
    public Integer getOspfCost() {
@@ -124,16 +158,20 @@ public class Interface implements Serializable {
       return _ospfHelloMultiplier;
    }
 
-   public boolean getOspfPassive() {
-      return _ospfPassive;
+   public Set<Ip> getOspfPassiveAreas() {
+      return _ospfPassiveAreas;
    }
 
    public String getOutgoingFilter() {
       return _outgoingFilter;
    }
 
-   public Prefix getPrefix() {
-      return _prefix;
+   public Prefix getPreferredPrefix() {
+      return _preferredPrefix;
+   }
+
+   public Prefix getPrimaryPrefix() {
+      return _primaryPrefix;
    }
 
    public SwitchportMode getSwitchportMode() {
@@ -164,12 +202,16 @@ public class Interface implements Serializable {
       _incomingFilter = accessListName;
    }
 
+   public void setIsoAddress(IsoAddress address) {
+      _isoAddress = address;
+   }
+
    public void setNativeVlan(int vlan) {
       _nativeVlan = vlan;
    }
 
-   public void setOspfArea(Ip ospfArea) {
-      _ospfArea = ospfArea;
+   public void setOspfActiveArea(Ip ospfActiveArea) {
+      _ospfActiveArea = ospfActiveArea;
    }
 
    public void setOspfCost(int defaultOspfCost) {
@@ -184,16 +226,16 @@ public class Interface implements Serializable {
       _ospfHelloMultiplier = multiplier;
    }
 
-   public void setOspfPassive(boolean ospfPassive) {
-      _ospfPassive = ospfPassive;
-   }
-
    public void setOutgoingFilter(String accessListName) {
       _outgoingFilter = accessListName;
    }
 
-   public void setPrefix(Prefix prefix) {
-      _prefix = prefix;
+   public void setPreferredPrefix(Prefix prefix) {
+      _preferredPrefix = prefix;
+   }
+
+   public void setPrimaryPrefix(Prefix prefix) {
+      _primaryPrefix = prefix;
    }
 
    public void setSwitchportMode(SwitchportMode switchportMode) {

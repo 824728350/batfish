@@ -5,6 +5,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.batfish.z3.NodProgram;
+
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Z3Exception;
+
 public class AndExpr extends BooleanExpr implements ComplexExpr {
 
    private List<BooleanExpr> _conjuncts;
@@ -116,6 +122,18 @@ public class AndExpr extends BooleanExpr implements ComplexExpr {
       else {
          return new AndExpr(newConjuncts);
       }
+   }
+
+   @Override
+   public BoolExpr toBoolExpr(NodProgram nodProgram) throws Z3Exception {
+      Context ctx = nodProgram.getContext();
+      List<BoolExpr> args = new ArrayList<BoolExpr>();
+      for (BooleanExpr conjunct : _conjuncts) {
+         BoolExpr be = conjunct.toBoolExpr(nodProgram);
+         args.add(be);
+      }
+      BoolExpr result = ctx.mkAnd(args.toArray(new BoolExpr[] {}));
+      return result;
    }
 
 }

@@ -3,6 +3,7 @@ package org.batfish.z3;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -13,14 +14,15 @@ import java.util.TreeSet;
 import org.batfish.collections.EdgeSet;
 import org.batfish.collections.FibMap;
 import org.batfish.collections.FibRow;
-import org.batfish.collections.FlowSinkInterface;
-import org.batfish.collections.FlowSinkSet;
+import org.batfish.collections.InterfaceSet;
+import org.batfish.collections.NodeInterfacePair;
 import org.batfish.collections.NodeSet;
 import org.batfish.collections.PolicyRouteFibIpMap;
 import org.batfish.collections.PolicyRouteFibNodeMap;
 import org.batfish.collections.RoleSet;
-import org.batfish.main.BatfishException;
+import org.batfish.common.BatfishException;
 import org.batfish.representation.Configuration;
+import org.batfish.representation.DataPlane;
 import org.batfish.representation.Edge;
 import org.batfish.representation.Interface;
 import org.batfish.representation.Ip;
@@ -78,6 +80,7 @@ import org.batfish.z3.node.PreOutEdgeExpr;
 import org.batfish.z3.node.PreOutExpr;
 import org.batfish.z3.node.PreOutInterfaceExpr;
 import org.batfish.z3.node.QueryRelationExpr;
+import org.batfish.z3.node.RangeMatchExpr;
 import org.batfish.z3.node.RoleAcceptExpr;
 import org.batfish.z3.node.RoleOriginateExpr;
 import org.batfish.z3.node.RuleExpr;
@@ -85,6 +88,12 @@ import org.batfish.z3.node.SaneExpr;
 import org.batfish.z3.node.Statement;
 import org.batfish.z3.node.TrueExpr;
 import org.batfish.z3.node.VarIntExpr;
+
+import com.microsoft.z3.BitVecExpr;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.FuncDecl;
+import com.microsoft.z3.Z3Exception;
 
 public class Synthesizer {
    public static final String DST_IP_VAR = "dst_ip";
@@ -96,118 +105,20 @@ public class Synthesizer {
    private static final String NODE_NONE_NAME = "(none)";
    public static final Map<String, Integer> PACKET_VAR_SIZES = initPacketVarSizes();
    public static final List<String> PACKET_VARS = getPacketVars();
-   private static final int PORT_BITS = 16;
-   private static final int PORT_MAX = 65535;
-   private static final int PORT_MIN = 0;
-   private static final int PROTOCOL_BITS = 9;
+   public static final int PORT_BITS = 16;
+   public static final int PROTOCOL_BITS = 8;
    public static final String SRC_IP_VAR = "src_ip";
    public static final String SRC_PORT_VAR = "src_port";
 
-   public static BooleanExpr bitvectorGEExpr(String bv, long lb, int numBits) {
-      // these masks refer to nested conditions, not to bitwise and, or
-      int numBitsLeft = numBits;
-
-      BooleanExpr finalExpr = null;
-      BooleanExpr currentExpr = null;
-      OrExpr currentOrExpr = null;
-      AndExpr currentAndExpr = null;
-      while (numBitsLeft > 0) {
-         // find largest remaining 'subnet mask' not overlapping with lowerbound
-         int orSpread = -1;
-         long orMask = 0;
-         int orStartPos;
-         int orEndPos;
-         orEndPos = numBitsLeft - 1;
-         for (int i = orEndPos; i >= 0; i--) {
-            orMask |= (1L << i);
-            if ((lb & orMask) != 0) {
-               orMask ^= (1L << i);
-               break;
-            }
-            else {
-               orSpread++;
-               numBitsLeft--;
-            }
-         }
-         if (orSpread >= 0) {
-            orStartPos = orEndPos - orSpread;
-            LitIntExpr zeroExpr = new LitIntExpr(0L, orStartPos, orEndPos);
-            IntExpr extractExpr = newExtractExpr(bv, numBits, orStartPos,
-                  orEndPos);
-            EqExpr eqExpr = new EqExpr(extractExpr, zeroExpr);
-            NotExpr notExpr = new NotExpr(eqExpr);
-            OrExpr oldOrExpr = currentOrExpr;
-            currentOrExpr = new OrExpr();
-            currentOrExpr.addDisjunct(notExpr);
-            if (currentExpr != null) {
-               if (currentExpr == currentAndExpr) {
-                  currentAndExpr.addConjunct(currentOrExpr);
-               }
-               else if (currentExpr == oldOrExpr) {
-                  oldOrExpr.addDisjunct(currentOrExpr);
-               }
-            }
-            else {
-               finalExpr = currentOrExpr;
-            }
-            currentExpr = currentOrExpr;
-         }
-
-         // find largest remaining 'subnet mask' not overlapping with lowerbound
-         int andSpread = -1;
-         long andMask = 0;
-         int andStartPos;
-         int andEndPos;
-         andEndPos = numBitsLeft - 1;
-         for (int i = andEndPos; i >= 0; i--) {
-            andMask |= (1L << i);
-            if ((lb & andMask) != andMask) {
-               andMask ^= (1L << i);
-               break;
-            }
-            else {
-               andSpread++;
-               numBitsLeft--;
-            }
-         }
-         if (andSpread >= 0) {
-            andStartPos = andEndPos - andSpread;
-            LitIntExpr andMaskExpr = new LitIntExpr(andMask, andStartPos,
-                  andEndPos);
-            IntExpr extractExpr = newExtractExpr(bv, numBits, andStartPos,
-                  andEndPos);
-            EqExpr eqExpr = new EqExpr(extractExpr, andMaskExpr);
-
-            AndExpr oldAndExpr = currentAndExpr;
-            currentAndExpr = new AndExpr();
-            currentAndExpr.addConjunct(eqExpr);
-            if (currentExpr != null) {
-               if (currentExpr == currentOrExpr) {
-                  currentOrExpr.addDisjunct(currentAndExpr);
-               }
-               else if (currentExpr == oldAndExpr) {
-                  oldAndExpr.addConjunct(currentAndExpr);
-               }
-            }
-            else {
-               finalExpr = currentAndExpr;
-            }
-            currentExpr = currentAndExpr;
-         }
+   public static List<Statement> getDeclareVarExprs() {
+      List<Statement> statements = new ArrayList<Statement>();
+      statements.add(new Comment("Variable Declarations"));
+      for (Entry<String, Integer> e : PACKET_VAR_SIZES.entrySet()) {
+         String var = e.getKey();
+         int size = e.getValue();
+         statements.add(new DeclareVarExpr(var, size));
       }
-      return finalExpr;
-   }
-
-   public static BooleanExpr bitvectorLEExpr(String bv, long lb, int numBits) {
-      OrExpr leExpr = new OrExpr();
-      LitIntExpr upperBound = new LitIntExpr(lb, numBits);
-      VarIntExpr var = new VarIntExpr(bv);
-      EqExpr exactMatch = new EqExpr(var, upperBound);
-      BooleanExpr ge = bitvectorGEExpr(bv, lb, numBits);
-      NotExpr lessThan = new NotExpr(ge);
-      leExpr.addDisjunct(exactMatch);
-      leExpr.addDisjunct(lessThan);
-      return leExpr;
+      return statements;
    }
 
    private static List<String> getPacketVars() {
@@ -218,6 +129,23 @@ public class Synthesizer {
       vars.add(DST_PORT_VAR);
       vars.add(IP_PROTOCOL_VAR);
       return vars;
+   }
+
+   public static Map<String, FuncDecl> getRelDeclFuncDecls(
+         List<Statement> existingStatements, Context ctx) throws Z3Exception {
+      Map<String, FuncDecl> funcDecls = new LinkedHashMap<String, FuncDecl>();
+      Set<String> relations = new TreeSet<String>();
+      for (Statement existingStatement : existingStatements) {
+         relations.addAll(existingStatement.getRelations());
+      }
+      relations.add(QueryRelationExpr.NAME);
+      for (String packetRel : relations) {
+         List<Integer> sizes = new ArrayList<Integer>();
+         sizes.addAll(PACKET_VAR_SIZES.values());
+         DeclareRelExpr declaration = new DeclareRelExpr(packetRel, sizes);
+         funcDecls.put(packetRel, declaration.toFuncDecl(ctx));
+      }
+      return funcDecls;
    }
 
    public static List<Statement> getVarDeclExprs() {
@@ -270,30 +198,39 @@ public class Synthesizer {
    }
 
    private final Map<String, Configuration> _configurations;
+
    private final FibMap _fibs;
-   private FlowSinkSet _flowSinks;
+
+   private InterfaceSet _flowSinks;
+
    private final PolicyRouteFibNodeMap _prFibs;
+
    private final boolean _simplify;
+
    private final EdgeSet _topologyEdges;
+
    private final Map<String, Set<Interface>> _topologyInterfaces;
+
    private List<String> _warnings;
 
-   public Synthesizer(Map<String, Configuration> configurations, FibMap fibs,
-         PolicyRouteFibNodeMap prFibs, EdgeSet topologyEdges, boolean simplify,
-         FlowSinkSet flowSinks) {
+   public Synthesizer(Map<String, Configuration> configurations,
+         DataPlane dataPlane, boolean simplify) {
       _configurations = configurations;
-      pruneInterfaces();
-      _fibs = fibs;
-      _topologyEdges = topologyEdges;
-      _prFibs = prFibs;
+      _fibs = dataPlane.getFibs();
+      _prFibs = dataPlane.getPolicyRouteFibNodeMap();
+      _topologyEdges = dataPlane.getTopologyEdges();
+      _flowSinks = dataPlane.getFlowSinks();
       _simplify = simplify;
       _topologyInterfaces = new TreeMap<String, Set<Interface>>();
       _warnings = new ArrayList<String>();
-      _flowSinks = flowSinks;
       computeTopologyInterfaces();
+      pruneInterfaces();
    }
 
    private void computeTopologyInterfaces() {
+      for (String hostname : _configurations.keySet()) {
+         _topologyInterfaces.put(hostname, new TreeSet<Interface>());
+      }
       for (Edge edge : _topologyEdges) {
          String hostname = edge.getNode1();
          if (!_topologyInterfaces.containsKey(hostname)) {
@@ -314,11 +251,10 @@ public class Synthesizer {
          for (String ifaceName : nodeInterfaces.keySet()) {
             if (isFlowSink(hostname, ifaceName)) {
                Interface iface = nodeInterfaces.get(ifaceName);
-               if (!_topologyInterfaces.containsKey(hostname)) {
-                  _topologyInterfaces.put(hostname, new TreeSet<Interface>());
+               if (iface.getActive()) {
+                  Set<Interface> interfaces = _topologyInterfaces.get(hostname);
+                  interfaces.add(iface);
                }
-               Set<Interface> interfaces = _topologyInterfaces.get(hostname);
-               interfaces.add(iface);
             }
          }
       }
@@ -343,9 +279,9 @@ public class Synthesizer {
       for (String hostname : _fibs.keySet()) {
          TreeSet<FibRow> fibSet = _fibs.get(hostname);
          FibRow firstRow = fibSet.first();
-         if (firstRow.getPrefix().asLong() != 0) {
+         if (!firstRow.getPrefix().equals(Prefix.ZERO)) {
             // no default route, so add one that drops traffic
-            FibRow dropDefaultRow = new FibRow(new Ip(0), 0,
+            FibRow dropDefaultRow = new FibRow(Prefix.ZERO,
                   FibRow.DROP_INTERFACE, "", "");
             fibSet.add(dropDefaultRow);
          }
@@ -358,10 +294,13 @@ public class Synthesizer {
             Set<FibRow> notRows = new TreeSet<FibRow>();
             for (int j = i + 1; j < fib.length; j++) {
                FibRow specificRow = fib[j];
-               long currentStart = currentRow.getPrefix().asLong();
-               long currentEnd = currentRow.getLastIp().asLong();
-               long specificStart = specificRow.getPrefix().asLong();
-               long specificEnd = specificRow.getLastIp().asLong();
+               long currentStart = currentRow.getPrefix().getAddress().asLong();
+               long currentEnd = currentRow.getPrefix().getEndAddress()
+                     .asLong();
+               long specificStart = specificRow.getPrefix().getAddress()
+                     .asLong();
+               long specificEnd = specificRow.getPrefix().getEndAddress()
+                     .asLong();
                // check whether later prefix is contained in this one
                if (currentStart <= specificStart && specificEnd <= currentEnd) {
                   if (currentStart == specificStart
@@ -407,8 +346,8 @@ public class Synthesizer {
 
             // must not match more specific routes
             for (FibRow notRow : notRows) {
-               int prefixLength = notRow.getPrefixLength();
-               long prefix = notRow.getPrefix().asLong();
+               int prefixLength = notRow.getPrefix().getPrefixLength();
+               long prefix = notRow.getPrefix().getAddress().asLong();
                int first = IP_BITS - prefixLength;
                if (first >= IP_BITS) {
                   continue;
@@ -426,8 +365,8 @@ public class Synthesizer {
             }
 
             // must match route
-            int prefixLength = currentRow.getPrefixLength();
-            long prefix = currentRow.getPrefix().asLong();
+            int prefixLength = currentRow.getPrefix().getPrefixLength();
+            long prefix = currentRow.getPrefix().getAddress().asLong();
             int first = IP_BITS - prefixLength;
             if (first < IP_BITS) {
                int last = IP_BITS - 1;
@@ -469,8 +408,9 @@ public class Synthesizer {
          Configuration c = e.getValue();
          for (Interface i : c.getInterfaces().values()) {
             if (i.getActive()) {
-               Ip ip = i.getIP();
-               if (ip != null) {
+               Prefix prefix = i.getPrefix();
+               if (prefix != null) {
+                  Ip ip = prefix.getAddress();
                   interfaceIps.add(ip);
                }
             }
@@ -500,8 +440,9 @@ public class Synthesizer {
          Configuration c = e.getValue();
          for (Interface i : c.getInterfaces().values()) {
             if (i.getActive()) {
-               Ip ip = i.getIP();
-               if (ip != null) {
+               Prefix prefix = i.getPrefix();
+               if (prefix != null) {
+                  Ip ip = prefix.getAddress();
                   interfaceIps.add(ip);
                }
             }
@@ -525,8 +466,8 @@ public class Synthesizer {
       List<Statement> statements = new ArrayList<Statement>();
       statements.add(new Comment(
             "Post out flow sink interface leads to node accept"));
-      for (FlowSinkInterface f : _flowSinks) {
-         String hostname = f.getNode();
+      for (NodeInterfacePair f : _flowSinks) {
+         String hostname = f.getHostname();
          String ifaceName = f.getInterface();
          if (isFlowSink(hostname, ifaceName)) {
             PostOutInterfaceExpr postOutIface = new PostOutInterfaceExpr(
@@ -549,7 +490,7 @@ public class Synthesizer {
          Map<String, IpAccessList> aclMap = new TreeMap<String, IpAccessList>();
          Set<Interface> interfaces = _topologyInterfaces.get(hostname);
          for (Interface iface : interfaces) {
-            if (iface.getIP() != null) {
+            if (iface.getPrefix() != null) {
                IpAccessList aclIn = iface.getIncomingFilter();
                IpAccessList aclOut = iface.getOutgoingFilter();
                PolicyMap routePolicy = iface.getRoutingPolicy();
@@ -601,8 +542,10 @@ public class Synthesizer {
                Set<Prefix> dstIpRanges = line.getDestinationIpRanges();
 
                Set<IpProtocol> protocols = line.getProtocols();
-               List<SubRange> srcPortRanges = line.getSrcPortRanges();
-               List<SubRange> dstPortRanges = line.getDstPortRanges();
+               Set<SubRange> srcPortRanges = new LinkedHashSet<SubRange>();
+               srcPortRanges.addAll(line.getSrcPortRanges());
+               Set<SubRange> dstPortRanges = new LinkedHashSet<SubRange>();
+               dstPortRanges.addAll(line.getDstPortRanges());
 
                AndExpr matchConditions = new AndExpr();
 
@@ -741,40 +684,9 @@ public class Synthesizer {
       return statements;
    }
 
-   private BooleanExpr getMatchAclRules_portHelper(List<SubRange> ranges,
+   private BooleanExpr getMatchAclRules_portHelper(Set<SubRange> ranges,
          String portVar) {
-      OrExpr or = new OrExpr();
-      for (SubRange srcPortRange : ranges) {
-         long low = srcPortRange.getStart();
-         long high = srcPortRange.getEnd();
-         if (low == high) {
-            VarIntExpr portVarExpr = new VarIntExpr(portVar);
-            LitIntExpr portLitExpr = new LitIntExpr(low, PORT_BITS);
-            EqExpr exactMatch = new EqExpr(portVarExpr, portLitExpr);
-            or.addDisjunct(exactMatch);
-         }
-         else {
-            boolean doLE = (high < PORT_MAX);
-            boolean doGE = (low > PORT_MIN);
-            AndExpr and = new AndExpr();
-            if (doGE) {
-               BooleanExpr geExpr = bitvectorGEExpr(portVar, low, PORT_BITS);
-               and.addConjunct(geExpr);
-            }
-            if (doLE) {
-               BooleanExpr leExpr = bitvectorLEExpr(portVar, high, PORT_BITS);
-               and.addConjunct(leExpr);
-            }
-            if (!doGE && !doLE) {
-               // all ports match
-               return TrueExpr.INSTANCE;
-            }
-            and.addConjunct(TrueExpr.INSTANCE);
-            or.addDisjunct(and);
-         }
-      }
-      or.addDisjunct(FalseExpr.INSTANCE);
-      return or;
+      return new RangeMatchExpr(portVar, PORT_BITS, ranges);
    }
 
    private List<Statement> getNodeAcceptToRoleAcceptRules() {
@@ -1000,8 +912,9 @@ public class Synthesizer {
          String hostname = c.getHostname();
          OrExpr someDstIpMatches = new OrExpr();
          for (Interface i : c.getInterfaces().values()) {
-            Ip ip = i.getIP();
-            if (ip != null) {
+            Prefix prefix = i.getPrefix();
+            if (prefix != null) {
+               Ip ip = prefix.getAddress();
                EqExpr dstIpMatches = new EqExpr(new VarIntExpr(DST_IP_VAR),
                      new LitIntExpr(ip));
                someDstIpMatches.addDisjunct(dstIpMatches);
@@ -1028,8 +941,9 @@ public class Synthesizer {
          String hostname = c.getHostname();
          OrExpr someDstIpMatch = new OrExpr();
          for (Interface i : c.getInterfaces().values()) {
-            Ip ip = i.getIP();
-            if (ip != null) {
+            Prefix prefix = i.getPrefix();
+            if (prefix != null) {
+               Ip ip = prefix.getAddress();
                EqExpr dstIpMatches = new EqExpr(new VarIntExpr(DST_IP_VAR),
                      new LitIntExpr(ip));
                someDstIpMatch.addDisjunct(dstIpMatches);
@@ -1108,8 +1022,8 @@ public class Synthesizer {
    private List<Statement> getPreOutEdgeToPreOutInterfaceRules() {
       List<Statement> statements = new ArrayList<Statement>();
       statements.add(new Comment("PreOutEdge => PreOutInterface"));
-      for (FlowSinkInterface f : _flowSinks) {
-         String hostnameOut = f.getNode();
+      for (NodeInterfacePair f : _flowSinks) {
+         String hostnameOut = f.getHostname();
          String hostnameIn = NODE_NONE_NAME;
          String intOut = f.getInterface();
          String intIn = FLOW_SINK_TERMINATION_NAME;
@@ -1329,18 +1243,26 @@ public class Synthesizer {
    }
 
    private boolean isFlowSink(String hostname, String ifaceName) {
-      FlowSinkInterface f = new FlowSinkInterface(hostname, ifaceName);
+      NodeInterfacePair f = new NodeInterfacePair(hostname, ifaceName);
       return _flowSinks.contains(f);
    }
 
    private void pruneInterfaces() {
       for (Configuration c : _configurations.values()) {
+         String hostname = c.getHostname();
          Set<String> prunedInterfaces = new HashSet<String>();
          Map<String, Interface> interfaces = c.getInterfaces();
+         Set<Interface> topologyInterfaces = _topologyInterfaces.get(hostname);
          for (Interface i : interfaces.values()) {
             String ifaceName = i.getName();
-            if (!i.getActive() || ifaceName.startsWith(FAKE_INTERFACE_PREFIX)) {
+            if ((!i.getActive() && !topologyInterfaces.contains(i))
+                  || ifaceName.startsWith(FAKE_INTERFACE_PREFIX)) {
                prunedInterfaces.add(ifaceName);
+            }
+            if (!i.getActive() && topologyInterfaces.contains(i)) {
+               Interface blankInterface = new Interface(ifaceName);
+               blankInterface.setActive(false);
+               interfaces.put(ifaceName, blankInterface);
             }
          }
          for (String i : prunedInterfaces) {
@@ -1407,6 +1329,7 @@ public class Synthesizer {
       for (Statement statement : statements) {
          if (_simplify) {
             Statement simplifiedStatement = statement.simplify();
+
             simplifiedStatement.print(sb, 0);
          }
          else {
@@ -1421,6 +1344,83 @@ public class Synthesizer {
       // hack to fix node: "(none)"
       output = output.replace("(none)", "_none_");
       return output;
+   }
+
+   public NodProgram synthesizeNodProgram(Context ctx) throws Z3Exception {
+      NodProgram nodProgram = new NodProgram(ctx);
+
+      List<Statement> ruleStatements = new ArrayList<Statement>();
+      List<Statement> dropRules = getDropRules();
+      List<Statement> acceptRules = getAcceptRules();
+      List<Statement> sane = getSane();
+      List<Statement> flowSinkAcceptRules = getFlowSinkAcceptRules();
+      List<Statement> originateToPostInRules = getOriginateToPostInRules();
+      List<Statement> postInInterfaceToPostInRules = getPostInInterfaceToPostInRules();
+      List<Statement> postInToNodeAcceptRules = getPostInToNodeAcceptRules();
+      List<Statement> postInToPreOutRules = getPostInToPreOutRules();
+      List<Statement> preOutToDestRouteRules = getPreOutToDestRouteRules();
+      List<Statement> destRouteToPreOutEdgeRules = getDestRouteToPreOutEdgeRules();
+      List<Statement> preOutEdgeToPreOutInterfaceRules = getPreOutEdgeToPreOutInterfaceRules();
+      List<Statement> policyRouteRules = getPolicyRouteRules();
+      List<Statement> matchAclRules = getMatchAclRules();
+      List<Statement> toNeighborsRules = getToNeighborsRules();
+      List<Statement> preInInterfaceToPostInInterfaceRules = getPreInInterfaceToPostInInterfaceRules();
+      List<Statement> preOutInterfaceToPostOutInterfaceRules = getPreOutInterfaceToPostOutInterfaceRules();
+      List<Statement> nodeAcceptToRoleAcceptRules = getNodeAcceptToRoleAcceptRules();
+      List<Statement> externalSrcIpRules = getExternalSrcIpRules();
+      List<Statement> externalDstIpRules = getExternalDstIpRules();
+      List<Statement> postOutIfaceToNodeTransitRules = getPostOutIfaceToNodeTransitRules();
+      List<Statement> roleOriginateToNodeOriginateRules = getRoleOriginateToNodeOriginateRules();
+
+      ruleStatements.addAll(dropRules);
+      ruleStatements.addAll(acceptRules);
+      ruleStatements.addAll(sane);
+      ruleStatements.addAll(flowSinkAcceptRules);
+      ruleStatements.addAll(originateToPostInRules);
+      ruleStatements.addAll(postInInterfaceToPostInRules);
+      ruleStatements.addAll(postInToNodeAcceptRules);
+      ruleStatements.addAll(postInToPreOutRules);
+      ruleStatements.addAll(preOutToDestRouteRules);
+      ruleStatements.addAll(destRouteToPreOutEdgeRules);
+      ruleStatements.addAll(preOutEdgeToPreOutInterfaceRules);
+      ruleStatements.addAll(policyRouteRules);
+      ruleStatements.addAll(matchAclRules);
+      ruleStatements.addAll(toNeighborsRules);
+      ruleStatements.addAll(preInInterfaceToPostInInterfaceRules);
+      ruleStatements.addAll(preOutInterfaceToPostOutInterfaceRules);
+      ruleStatements.addAll(nodeAcceptToRoleAcceptRules);
+      ruleStatements.addAll(externalSrcIpRules);
+      ruleStatements.addAll(externalDstIpRules);
+      ruleStatements.addAll(postOutIfaceToNodeTransitRules);
+      ruleStatements.addAll(roleOriginateToNodeOriginateRules);
+
+      Map<String, FuncDecl> relDeclFuncDecls = getRelDeclFuncDecls(
+            ruleStatements, ctx);
+      nodProgram.getRelationDeclarations().putAll(relDeclFuncDecls);
+      Map<String, BitVecExpr> variables = nodProgram.getVariables();
+      Map<String, BitVecExpr> variablesAsConsts = nodProgram
+            .getVariablesAsConsts();
+      int deBruinIndex = 0;
+      for (Entry<String, Integer> e : PACKET_VAR_SIZES.entrySet()) {
+         String var = e.getKey();
+         int size = e.getValue();
+         BitVecExpr varExpr = (BitVecExpr) ctx.mkBound(deBruinIndex,
+               ctx.mkBitVecSort(size));
+         BitVecExpr varAsConstExpr = (BitVecExpr) ctx.mkConst(var,
+               ctx.mkBitVecSort(size));
+         variables.put(var, varExpr);
+         variablesAsConsts.put(var, varAsConstExpr);
+         deBruinIndex++;
+      }
+      List<BoolExpr> rules = nodProgram.getRules();
+      for (Statement statement : ruleStatements) {
+         if (statement instanceof RuleExpr) {
+            RuleExpr ruleExpr = (RuleExpr) statement;
+            BoolExpr rule = ruleExpr.toBoolExpr(nodProgram);
+            rules.add(rule);
+         }
+      }
+      return nodProgram;
    }
 
 }

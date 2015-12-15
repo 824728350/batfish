@@ -16,6 +16,16 @@ agt_preference
    PREFERENCE preference = DEC
 ;
 
+bmpt_station_address
+:
+   STATION_ADDRESS IP_ADDRESS
+;
+
+bmpt_station_port
+:
+   STATION_PORT DEC
+;
+
 gt_discard
 :
    DISCARD
@@ -87,6 +97,11 @@ irt_rib_group_tail
    | irrgt_null
 ;
 
+rgt_export_rib
+:
+   EXPORT_RIB rib = variable
+;
+
 rgt_import_policy
 :
    IMPORT_POLICY name = variable
@@ -104,6 +119,11 @@ ribt_aggregate
       IP_PREFIX
       | IPV6_PREFIX
    ) ribt_aggregate_tail
+;
+
+ribt_apply_groups
+:
+   s_apply_groups
 ;
 
 ribt_aggregate_tail
@@ -127,9 +147,15 @@ rit_apply_groups
    s_apply_groups
 ;
 
+rit_apply_groups_except
+:
+   s_apply_groups_except
+;
+
 rit_common
 :
    rit_apply_groups
+   | rit_apply_groups_except
    | rit_description
    | rit_routing_options
 ;
@@ -141,7 +167,13 @@ rit_description
 
 rit_instance_type
 :
-   INSTANCE_TYPE VRF
+   INSTANCE_TYPE
+   (
+      FORWARDING
+      | L2VPN
+      | VIRTUAL_SWITCH
+      | VRF
+   )
 ;
 
 rit_interface
@@ -179,6 +211,7 @@ rit_null
       | CLASS_OF_SERVICE
       | EVENT_OPTIONS
       | FORWARDING_OPTIONS
+      | PROVIDER_TUNNEL
       | SERVICES
       | SNMP
    ) s_null_filler
@@ -191,7 +224,11 @@ rit_protocols
 
 rit_route_distinguisher
 :
-   ROUTE_DISTINGUISHER IP_ADDRESS COLON DEC
+   ROUTE_DISTINGUISHER
+   (
+      DEC
+      | IP_ADDRESS
+   ) COLON DEC
 ;
 
 rit_routing_options
@@ -259,6 +296,17 @@ rot_martians
    MARTIANS s_null_filler
 ;
 
+rot_bmp
+:
+   BMP rot_bmp_tail
+;
+
+rot_bmp_tail
+:
+   bmpt_station_address
+   | bmpt_station_port
+;
+
 rot_generate
 :
    GENERATE ROUTE
@@ -292,7 +340,11 @@ rot_null
       FORWARDING_TABLE
       | MULTICAST
       | MULTIPATH
+      | NONSTOP_ROUTING
       | OPTIONS
+      | PPM
+      | RESOLUTION
+      | TRACEOPTIONS
    ) s_null_filler
 ;
 
@@ -303,18 +355,26 @@ rot_rib_groups
 
 rot_rib_groups_tail
 :
-   rgt_import_policy
+   rgt_export_rib
+   | rgt_import_policy
    | rgt_import_rib
 ;
 
 rot_rib
 :
-   RIB name = VARIABLE rot_rib_tail
+   RIB
+   (
+      name = VARIABLE
+      | WILDCARD
+   ) rot_rib_tail
 ;
 
 rot_rib_tail
 :
-   ribt_aggregate
+// intentional blank
+
+   | ribt_aggregate
+   | ribt_apply_groups
    | ribt_generate
    | ribt_static
 ;
@@ -335,6 +395,16 @@ rot_static_tail
    | rst_route
 ;
 
+rot_srlg
+:
+   SRLG rot_srlg_tail
+;
+
+rot_srlg_tail
+:
+   srlgt_named
+;
+
 rst_rib_group
 :
    RIB_GROUP name = variable
@@ -351,20 +421,8 @@ rst_route
 
 rst_route_tail
 :
-   srt_active
-   | srt_discard
-   | srt_install
-   | srt_next_hop
-   | srt_next_table
-   | srt_no_readvertise
-   | srt_no_retain
-   | srt_passive
-   | srt_preference
-   | srt_readvertise
-   | srt_reject
-   | srt_resolve
-   | srt_retain
-   | srt_tag
+   srt_common
+   | srt_qualified_next_hop
 ;
 
 s_routing_instances
@@ -388,6 +446,7 @@ s_routing_options_tail
    rot_aggregate
    | rot_auto_export
    | rot_autonomous_system
+   | rot_bmp
    | rot_generate
    | rot_interface_routes
    | rot_martians
@@ -395,12 +454,67 @@ s_routing_options_tail
    | rot_rib
    | rot_rib_groups
    | rot_router_id
+   | rot_srlg
    | rot_static
+;
+
+srlgnt_srlg_cost
+:
+   SRLG_COST cost = DEC
+;
+
+srlgnt_srlg_value
+:
+   SRLG_VALUE value = DEC
+;
+
+srlgt_named
+:
+   name = variable srlgt_named_tail
+;
+
+srlgt_named_tail
+:
+   srlgnt_srlg_cost
+   | srlgnt_srlg_value
 ;
 
 srt_active
 :
    ACTIVE
+;
+
+srt_as_path
+:
+   AS_PATH PATH
+   (
+      path += DEC
+   )+
+;
+
+srt_common
+:
+   srt_active
+   | srt_as_path
+   | srt_community
+   | srt_discard
+   | srt_install
+   | srt_next_hop
+   | srt_next_table
+   | srt_no_readvertise
+   | srt_no_retain
+   | srt_passive
+   | srt_preference
+   | srt_readvertise
+   | srt_reject
+   | srt_resolve
+   | srt_retain
+   | srt_tag
+;
+
+srt_community
+:
+   COMMUNITY standard_community
 ;
 
 srt_discard
@@ -419,6 +533,7 @@ srt_next_hop
    (
       IP_ADDRESS
       | IPV6_ADDRESS
+      | interface_id
    )
 ;
 
@@ -445,6 +560,11 @@ srt_passive
 srt_preference
 :
    PREFERENCE pref = DEC
+;
+
+srt_qualified_next_hop
+:
+   QUALIFIED_NEXT_HOP nexthop = IP_ADDRESS srt_common?
 ;
 
 srt_readvertise

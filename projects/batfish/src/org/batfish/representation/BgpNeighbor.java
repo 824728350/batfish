@@ -57,6 +57,11 @@ public class BgpNeighbor implements Serializable {
    private Integer _localAs;
 
    /**
+    * The ip address of the containing router as reported to this peer
+    */
+   private Ip _localIp;
+
+   /**
     * The set of policies governing routes that may be originated (i.e. routes
     * not received through BGP) from the containing BGP process. Each policy in
     * this set is applied independently of the others. These policies are
@@ -71,6 +76,11 @@ public class BgpNeighbor implements Serializable {
    private Set<PolicyMap> _outboundPolicyMaps;
 
    /**
+    * Ip range from which to accept dynamic BGP peering sessions.
+    */
+   private Prefix _prefix;
+
+   /**
     * The autonomous system number that the containing BGP process considers
     * this peer to have.
     */
@@ -82,10 +92,12 @@ public class BgpNeighbor implements Serializable {
     */
    private Boolean _sendCommunity;
 
-   /**
-    * TODO: figure out semantics of this field
-    */
-   private String _updateSource;
+   private BgpNeighbor() {
+      _outboundPolicyMaps = new LinkedHashSet<PolicyMap>();
+      _inboundPolicyMaps = new LinkedHashSet<PolicyMap>();
+      _originationPolicies = new LinkedHashSet<PolicyMap>();
+      _generatedRoutes = new LinkedHashSet<GeneratedRoute>();
+   }
 
    /**
     * Constructs a BgpNeighbor with the given peer ip address for
@@ -94,15 +106,19 @@ public class BgpNeighbor implements Serializable {
     * @param address
     */
    public BgpNeighbor(Ip address) {
+      this();
       _address = address;
-      _clusterId = null;
-      _outboundPolicyMaps = new LinkedHashSet<PolicyMap>();
-      _inboundPolicyMaps = new LinkedHashSet<PolicyMap>();
-      _groupName = null;
-      _originationPolicies = new LinkedHashSet<PolicyMap>();
-      _generatedRoutes = new LinkedHashSet<GeneratedRoute>();
-      _remoteAs = null;
-      _localAs = null;
+   }
+
+   /**
+    * Constructs a BgpNeighbor with the given peer dynamic ip range for
+    * {@link #_prefix}
+    *
+    * @param prefix
+    */
+   public BgpNeighbor(Prefix prefix) {
+      this();
+      _prefix = prefix;
    }
 
    /**
@@ -133,7 +149,6 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
     * @return {@link #_clusterId}
     */
    public Long getClusterId() {
@@ -148,7 +163,6 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
     * @return {@link #_generatedRoutes}
     */
    public Set<GeneratedRoute> getGeneratedRoutes() {
@@ -156,7 +170,6 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
     * @return {@link #_groupName}
     */
    public String getGroupName() {
@@ -164,7 +177,6 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
     * @return {@link #_inboundPolicyMaps}
     */
    public Set<PolicyMap> getInboundPolicyMaps() {
@@ -172,7 +184,6 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
     * @return {@link #_localAs}
     */
    public Integer getLocalAs() {
@@ -180,7 +191,13 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
+    * @return {@link #_localIp}
+    */
+   public Ip getLocalIp() {
+      return _localIp;
+   }
+
+   /**
     * @return {@link #_originationPolicies}
     */
    public Set<PolicyMap> getOriginationPolicies() {
@@ -188,7 +205,6 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
     * @return {@link #_outboundPolicyMaps}
     */
    public Set<PolicyMap> getOutboundPolicyMaps() {
@@ -196,7 +212,18 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
+    * @return {@link #_prefix} if non-null, else /32 prefix of {@link #_address}
+    */
+   public Prefix getPrefix() {
+      if (_prefix != null) {
+         return _prefix;
+      }
+      else {
+         return new Prefix(_address, 32);
+      }
+   }
+
+   /**
     * @return {@link #_remoteAs}
     */
    public Integer getRemoteAs() {
@@ -204,19 +231,10 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
-    *
     * @return {@link #_sendCommunity}
     */
    public Boolean getSendCommunity() {
       return _sendCommunity;
-   }
-
-   /**
-    *
-    * @return {@link #_updateSource}
-    */
-   public String getUpdateSource() {
-      return _updateSource;
    }
 
    /**
@@ -256,6 +274,15 @@ public class BgpNeighbor implements Serializable {
    }
 
    /**
+    * Sets {@link #_localIp}
+    *
+    * @param updateSource
+    */
+   public void setLocalIp(Ip updateSource) {
+      _localIp = updateSource;
+   }
+
+   /**
     * Sets {@link #_remoteAs}
     *
     * @param remoteAs
@@ -273,13 +300,9 @@ public class BgpNeighbor implements Serializable {
       _sendCommunity = sendCommunity;
    }
 
-   /**
-    * Sets {@link #_updateSource}
-    *
-    * @param updateSource
-    */
-   public void setUpdateSource(String updateSource) {
-      _updateSource = updateSource;
+   @Override
+   public String toString() {
+      return "BgpNeighbor<Ip:" + _address + ", AS:" + _remoteAs + ">";
    }
 
 }

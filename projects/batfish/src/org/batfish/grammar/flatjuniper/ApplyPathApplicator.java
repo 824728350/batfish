@@ -7,6 +7,8 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.batfish.grammar.flatjuniper.FlatJuniperParser.*;
 import org.batfish.grammar.flatjuniper.Hierarchy.HierarchyTree.HierarchyPath;
+import org.batfish.common.BatfishException;
+import org.batfish.main.Warnings;
 
 public class ApplyPathApplicator extends FlatJuniperParserBaseListener {
 
@@ -22,8 +24,13 @@ public class ApplyPathApplicator extends FlatJuniperParserBaseListener {
 
    private List<ParseTree> _newConfigurationLines;
 
-   public ApplyPathApplicator(Hierarchy hierarchy) {
+   private boolean _reenablePathRecording;
+
+   private final Warnings _w;
+
+   public ApplyPathApplicator(Hierarchy hierarchy, Warnings warnings) {
       _hierarchy = hierarchy;
+      _w = warnings;
    }
 
    @Override
@@ -32,6 +39,16 @@ public class ApplyPathApplicator extends FlatJuniperParserBaseListener {
       _configurationContext = ctx;
       _newConfigurationLines = new ArrayList<ParseTree>();
       _newConfigurationLines.addAll(ctx.children);
+   }
+
+   @Override
+   public void enterInterface_id(Interface_idContext ctx) {
+      if (_enablePathRecording && ctx.unit != null) {
+         _enablePathRecording = false;
+         _reenablePathRecording = true;
+         String text = ctx.getText();
+         _currentPath.addNode(text);
+      }
    }
 
    @Override
@@ -50,11 +67,21 @@ public class ApplyPathApplicator extends FlatJuniperParserBaseListener {
             applyPathPath.addNode(pathComponent);
          }
       }
-      List<ParseTree> newLines = _hierarchy.getApplyPathLines(_currentPath,
-            applyPathPath, _configurationContext);
       int insertionIndex = _newConfigurationLines.indexOf(_currentSetLine);
+      List<ParseTree> newLines = null;
+      try {
+         newLines = _hierarchy.getApplyPathLines(_currentPath, applyPathPath,
+               _configurationContext);
+      }
+      catch (BatfishException e) {
+         _w.redFlag("Could not apply path: "
+               + pathQuoted
+               + ": make sure path is terminated by wildcard (e.g. <*>) representing ip(v6) addresses or prefixes");
+      }
       _newConfigurationLines.remove(_currentSetLine);
-      _newConfigurationLines.addAll(insertionIndex, newLines);
+      if (newLines != null) {
+         _newConfigurationLines.addAll(insertionIndex, newLines);
+      }
    }
 
    @Override
@@ -72,6 +99,14 @@ public class ApplyPathApplicator extends FlatJuniperParserBaseListener {
    public void exitFlat_juniper_configuration(
          Flat_juniper_configurationContext ctx) {
       _configurationContext.children = _newConfigurationLines;
+   }
+
+   @Override
+   public void exitInterface_id(Interface_idContext ctx) {
+      if (_reenablePathRecording) {
+         _enablePathRecording = true;
+         _reenablePathRecording = false;
+      }
    }
 
    @Override

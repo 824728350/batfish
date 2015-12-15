@@ -2,6 +2,7 @@ package org.batfish.representation.juniper;
 
 import java.util.Collections;
 
+import org.batfish.main.Warnings;
 import org.batfish.representation.Configuration;
 import org.batfish.representation.PolicyMapClause;
 import org.batfish.representation.PolicyMapMatchCommunityListLine;
@@ -21,9 +22,10 @@ public final class PsFromCommunity extends PsFrom {
    }
 
    @Override
-   public void applyTo(PolicyMapClause clause, Configuration c) {
-      org.batfish.representation.CommunityList list = c.getCommunityLists().get(
-            _name);
+   public void applyTo(PolicyMapClause clause, Configuration c,
+         Warnings warnings) {
+      org.batfish.representation.CommunityList list = c.getCommunityLists()
+            .get(_name);
       if (list == null) {
          throw new VendorConversionException("missing community list: \""
                + _name + "\"");

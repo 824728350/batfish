@@ -10,7 +10,9 @@ import org.batfish.z3.node.RoleAcceptExpr;
 import org.batfish.z3.node.RuleExpr;
 import org.batfish.z3.node.SaneExpr;
 
-public class RoleReachabilityQuerySynthesizer implements QuerySynthesizer {
+import com.microsoft.z3.Z3Exception;
+
+public class RoleReachabilityQuerySynthesizer extends BaseQuerySynthesizer {
 
    private String _queryText;
 
@@ -35,6 +37,13 @@ public class RoleReachabilityQuerySynthesizer implements QuerySynthesizer {
       sb.append("\n");
       String queryText = sb.toString();
       _queryText = queryText;
+   }
+
+   @Override
+   public NodProgram getNodProgram(NodProgram baseProgram) throws Z3Exception {
+      throw new UnsupportedOperationException(
+            "no implementation for generated method"); // TODO Auto-generated
+                                                       // method stub
    }
 
    @Override

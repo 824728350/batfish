@@ -3,6 +3,10 @@ package org.batfish.z3.node;
 import java.util.Collections;
 import java.util.Set;
 
+import org.batfish.z3.NodProgram;
+
+import com.microsoft.z3.Z3Exception;
+
 public class VarIntExpr extends IntExpr {
 
    private String _var;
@@ -33,6 +37,12 @@ public class VarIntExpr extends IntExpr {
    @Override
    public int hashCode() {
       return _var.hashCode();
+   }
+
+   @Override
+   public com.microsoft.z3.BitVecExpr toBitVecExpr(NodProgram nodProgram)
+         throws Z3Exception {
+      return nodProgram.getVariables().get(_var);
    }
 
 }

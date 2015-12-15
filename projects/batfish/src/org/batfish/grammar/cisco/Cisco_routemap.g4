@@ -6,6 +6,11 @@ options {
    tokenVocab = CiscoLexer;
 }
 
+ip_policy_list_stanza
+:
+   IP POLICY_LIST name = variable access_list_action NEWLINE match_rm_stanza*
+;
+
 match_as_path_access_list_rm_stanza
 :
    MATCH AS_PATH
@@ -77,6 +82,14 @@ match_length_rm_stanza
    MATCH LENGTH ~NEWLINE* NEWLINE
 ;
 
+match_policy_list_rm_stanza
+:
+   MATCH POLICY_LIST
+   (
+      name_list += variable
+   )+ NEWLINE
+;
+
 match_rm_stanza
 :
    match_as_path_access_list_rm_stanza
@@ -87,6 +100,7 @@ match_rm_stanza
    | match_ip_prefix_list_rm_stanza
    | match_ipv6_rm_stanza
    | match_length_rm_stanza
+   | match_policy_list_rm_stanza
    | match_tag_rm_stanza
 ;
 
@@ -150,6 +164,11 @@ route_map_tail_tail
    )*
 ;
 
+route_policy_stanza
+:
+   ROUTE_POLICY name = variable NEWLINE ~END_POLICY* END_POLICY NEWLINE
+;
+
 set_as_path_prepend_rm_stanza
 :
    SET AS_PATH PREPEND LAST_AS?
@@ -169,7 +188,7 @@ set_comm_list_delete_rm_stanza
 
 set_community_additive_rm_stanza
 :
-   SET COMMUNITY
+   SET COMMUNITY COMMUNITY_LIST?
    (
       comm_list += community
    )+ ADDITIVE NEWLINE
@@ -182,7 +201,7 @@ set_community_none_rm_stanza
 
 set_community_rm_stanza
 :
-   SET COMMUNITY
+   SET COMMUNITY COMMUNITY_LIST?
    (
       comm_list += community
    )+ NEWLINE
@@ -232,7 +251,7 @@ set_metric_rm_stanza
 
 set_metric_type_rm_stanza
 :
-   SET METRIC_TYPE type = VARIABLE NEWLINE
+   SET METRIC_TYPE type = variable NEWLINE
 ;
 
 set_mpls_label_rm_stanza

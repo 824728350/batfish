@@ -67,6 +67,11 @@ ACCEPT_DIALIN
    'accept-dialin'
 ;
 
+ACCEPT_LIFETIME
+:
+   'accept-lifetime'
+;
+
 ACCESS
 :
    'access'
@@ -164,6 +169,11 @@ ADDRESS_POOL
    'address-pool'
 ;
 
+ADJACENCY
+:
+   'adjacency'
+;
+
 ADMINISTRATIVE_WEIGHT
 :
    'administrative-weight'
@@ -194,6 +204,16 @@ AESA
    'aesa'
 ;
 
+AFFINITY
+:
+   'affinity'
+;
+
+AFFINITY_MAP
+:
+   'affinity-map'
+;
+
 AGGREGATE
 :
    'aggregate'
@@ -217,6 +237,16 @@ ALERT_GROUP
 ALIAS
 :
    'alias'
+;
+
+ALLOCATE
+:
+   'allocate'
+;
+
+ALLOW
+:
+   'allow'
 ;
 
 ALLOWED
@@ -274,6 +304,16 @@ ARCHIVE
    'archive'
 ;
 
+ARCHIVE_LENGTH
+:
+   'archive-length'
+;
+
+ARCHIVE_SIZE
+:
+   'archive-size'
+;
+
 AREA
 :
    'area'
@@ -311,6 +351,11 @@ ASDM
    'asdm'
 ;
 
+ASSEMBLER
+:
+   'assembler'
+;
+
 ASSOCIATE
 :
    'associate'
@@ -336,6 +381,16 @@ ATM
    'atm'
 ;
 
+ATTRIBUTE_NAMES
+:
+   'attribute-names'
+;
+
+ATTRIBUTE_SET
+:
+   'attribute-set'
+;
+
 AUDIT
 :
    'audit'
@@ -349,6 +404,11 @@ AUTH_PROXY
 AUTHENTICATION
 :
    'authentication'
+;
+
+AUTHENTICATION_KEY
+:
+   'authentication-key'
 ;
 
 AUTHENTICATION_PORT
@@ -394,6 +454,16 @@ AUTO_SUMMARY
 AUTO_SYNC
 :
    'auto-sync'
+;
+
+AUTO_TUNNEL
+:
+   'auto-tunnel'
+;
+
+AUTOROUTE
+:
+   'autoroute'
 ;
 
 AUTOSELECT
@@ -521,6 +591,11 @@ BROADCAST_ADDRESS
    'broadcast-address'
 ;
 
+BUNDLE
+:
+   'bundle'
+;
+
 CA
 :
    'ca'
@@ -564,6 +639,11 @@ CALLER_ID
 CARD
 :
    'card'
+;
+
+CARRIER_DELAY
+:
+   'carrier-delay'
 ;
 
 CAS_CUSTOM
@@ -731,6 +811,11 @@ COMM_LIST
    'comm-list'
 ;
 
+COMMAND
+:
+   'command'
+;
+
 COMMANDER_ADDRESS
 :
    'commander-address'
@@ -756,6 +841,11 @@ COMMUNITY_LIST
 
 ;
 
+CONFDCONFIG
+:
+   'confdConfig'
+;
+
 CONFIG_REGISTER
 :
    'config-register'
@@ -764,6 +854,11 @@ CONFIG_REGISTER
 CONFIGURATION
 :
    'configuration'
+;
+
+CONFLICT_POLICY
+:
+   'conflict-policy'
 ;
 
 CONFORM_ACTION
@@ -826,6 +921,11 @@ CPTONE
    'cptone'
 ;
 
+CRC
+:
+   'crc'
+;
+
 CREDENTIALS
 :
    'credentials'
@@ -834,6 +934,11 @@ CREDENTIALS
 CRYPTO
 :
    'crypto'
+;
+
+CRYPTOGRAPHIC_ALGORITHM
+:
+   'cryptographic-algorithm'
 ;
 
 CRL
@@ -914,6 +1019,11 @@ DEFAULT_GATEWAY
 DEFAULT_GROUP_POLICY
 :
    'default-group-policy'
+;
+
+DEFAULT_GW
+:
+   'default-gw'
 ;
 
 DEFAULT_INFORMATION
@@ -1054,6 +1164,11 @@ DISABLE
 DISCARD
 :
    'discard'
+;
+
+DISCOVERY
+:
+   'discovery'
 ;
 
 DISTANCE
@@ -1241,6 +1356,31 @@ END
    'end'
 ;
 
+END_CLASS_MAP
+:
+   'end-class-map'
+;
+
+END_POLICY
+:
+   'end-policy'
+;
+
+END_POLICY_MAP
+:
+   'end-policy-map'
+;
+
+END_SET
+:
+   'end-set'
+;
+
+ENFORCE_FIRST_AS
+:
+   'enforce-first-as'
+;
+
 ENGINEID
 :
    'engineid' -> pushMode(M_COMMENT)
@@ -1319,6 +1459,11 @@ EXCEED_ACTION
 EXCEPTION
 :
    'exception'
+;
+
+EXCLUDE
+:
+   'exclude'
 ;
 
 EXEC
@@ -1438,6 +1583,11 @@ FAST_FLOOD
    'fast-flood'
 ;
 
+FAST_REROUTE
+:
+   'fast-reroute'
+;
+
 FEATURE
 :
    'feature'
@@ -1461,6 +1611,11 @@ FILE_BROWSING
 FILE_ENTRY
 :
    'file-entry'
+;
+
+FILE_SIZE
+:
+   'file-size'
 ;
 
 FILTER_LIST
@@ -1535,6 +1690,11 @@ FORWARDING
    'forwarding'
 ;
 
+FPD
+:
+   'fpd'
+;
+
 FQDN
 :
    'fqdn'
@@ -1598,6 +1758,11 @@ GATEWAY
 GE
 :
    'ge'
+;
+
+GID
+:
+   'gid'
 ;
 
 GLBP
@@ -1690,9 +1855,24 @@ HELLO
    'hello'
 ;
 
+HELLO_INTERVAL
+:
+   'hello-interval'
+;
+
 HELLO_MULTIPLIER
 :
    'hello-multiplier'
+;
+
+HELLO_PADDING
+:
+   'hello-padding'
+;
+
+HELLO_PASSWORD
+:
+   'hello-password'
 ;
 
 HELPER_ADDRESS
@@ -1728,6 +1908,11 @@ HISTORY
 HOLD_QUEUE
 :
    'hold-queue'
+;
+
+HOMEDIR
+:
+   'homedir'
 ;
 
 HOST
@@ -1853,6 +2038,11 @@ IN
 INACTIVITY_TIMER
 :
    'inactivity-timer'
+;
+
+INBAND
+:
+   'inband'
 ;
 
 INBOUND
@@ -2002,6 +2192,11 @@ ISL
    'isl'
 ;
 
+ISPF
+:
+   'ispf'
+;
+
 KEEPALIVE
 :
    'keepalive'
@@ -2027,6 +2222,11 @@ KEY
    'key' -> pushMode(M_Key)
 ;
 
+KEY_SOURCE
+:
+   'key-source'
+;
+
 KEY_STRING
 :
    'key-string'
@@ -2035,6 +2235,11 @@ KEY_STRING
 KEYPAIR
 :
    'keypair'
+;
+
+KEYPATH
+:
+   'keypath'
 ;
 
 KEYRING
@@ -2065,6 +2270,11 @@ L2TP
 L2TP_CLASS
 :
    'l2tp-class'
+;
+
+LABEL
+:
+   'label'
 ;
 
 LACP
@@ -2102,6 +2312,11 @@ LDAPS
    'ldaps'
 ;
 
+LDP
+:
+   'ldp'
+;
+
 LE
 :
    'le'
@@ -2110,6 +2325,16 @@ LE
 LEASE
 :
    'lease'
+;
+
+LEVEL_1
+:
+   'level-1'
+;
+
+LEVEL_1_2
+:
+   'level-1-2'
 ;
 
 LEVEL_2
@@ -2282,6 +2507,11 @@ LPD
    'lpd'
 ;
 
+LPTS
+:
+   'lpts'
+;
+
 LRE
 :
    'lre'
@@ -2295,6 +2525,11 @@ LSP_GEN_INTERVAL
 LSP_INTERVAL
 :
    'lsp-interval'
+;
+
+LSP_PASSWORD
+:
+   'lsp-password'
 ;
 
 LSP_REFRESH_INTERVAL
@@ -2350,6 +2585,11 @@ MANAGEMENT
 MANAGEMENT_ONLY
 :
    'management-only'
+;
+
+MANAGEMENT_PLANE
+:
+   'management-plane'
 ;
 
 MAP
@@ -2542,6 +2782,11 @@ MONITOR
    'monitor'
 ;
 
+MONITORING
+:
+   'monitoring'
+;
+
 MOP
 :
    'mop'
@@ -2630,6 +2875,11 @@ NAME_SERVER
 NAMEIF
 :
    'nameif'
+;
+
+NAMESPACE
+:
+   'namespace'
 ;
 
 NAME
@@ -2777,6 +3027,11 @@ NEXTHOP
    'nexthop'
 ;
 
+NHOP_ONLY
+:
+   'nhop-only'
+;
+
 NNTP
 :
    'nntp'
@@ -2832,6 +3087,11 @@ NONEGOTIATE
    'nonegotiate'
 ;
 
+NOT_ADVERTISE
+:
+   'not-advertise'
+;
+
 NOTIFY
 :
    'notify'
@@ -2842,6 +3102,11 @@ NSF
    'nsf'
 ;
 
+NSR
+:
+   'nsr'
+;
+
 NSSA
 :
    'nssa'
@@ -2850,6 +3115,11 @@ NSSA
 NTP
 :
    'ntp'
+;
+
+OAM
+:
+   'oam'
 ;
 
 OBJECT
@@ -2875,6 +3145,11 @@ OPEN
 OPENFLOW
 :
    'openflow'
+;
+
+OPS
+:
+   'ops'
 ;
 
 ORIGIN
@@ -2905,6 +3180,11 @@ OUI
 OUT
 :
    'out'
+;
+
+OUT_OF_BAND
+:
+   'out-of-band'
 ;
 
 OWNER
@@ -2952,6 +3232,11 @@ PARTICIPATE
    'participate'
 ;
 
+PASSIVE
+:
+   'passive'
+;
+
 PASSIVE_INTERFACE
 :
    'passive-interface'
@@ -2975,6 +3260,11 @@ PASSWORD_STORAGE
 PATH_JITTER
 :
    'path-jitter'
+;
+
+PATH_OPTION
+:
+   'path-option'
 ;
 
 PAUSE
@@ -3152,6 +3442,11 @@ PORT_UNREACHABLE
    'port-unreachable'
 ;
 
+POS
+:
+   'pos'
+;
+
 POWER
 :
    'power'
@@ -3200,6 +3495,11 @@ PREFIX
 PREFIX_LIST
 :
    'prefix-list'
+;
+
+PREFIX_SET
+:
+   'prefix-set'
 ;
 
 PREPEND
@@ -3417,6 +3717,11 @@ REDUNDANCY
    'redundancy'
 ;
 
+REFERENCE_BANDWIDTH
+:
+   'reference-bandwidth'
+;
+
 REFLECT
 :
    'reflect'
@@ -3472,6 +3777,11 @@ REPLACE_AS
    'replace-as'
 ;
 
+REOPTIMIZE
+:
+   'reoptimize'
+;
+
 REQUEST
 :
    'request'
@@ -3490,6 +3800,11 @@ RESOURCE
 RESOURCE_POOL
 :
    'resource-pool'
+;
+
+RESOURCES
+:
+   'resources'
 ;
 
 RETRANSMIT
@@ -3557,6 +3872,11 @@ ROUTE_MAP
    'route-map'
 ;
 
+ROUTE_POLICY
+:
+   'route-policy'
+;
+
 ROUTE_REFLECTOR_CLIENT
 :
    'route-reflector-client'
@@ -3595,6 +3915,11 @@ RTR
 RST
 :
    'rst'
+;
+
+RSVP
+:
+   'rsvp'
 ;
 
 RT
@@ -3662,9 +3987,19 @@ SDM
    'sdm'
 ;
 
+SDR
+:
+   'sdr'
+;
+
 SECONDARY
 :
    'secondary'
+;
+
+SECRET
+:
+   'secret'
 ;
 
 SECUREID_UDP
@@ -3690,6 +4025,11 @@ SEND_COMMUNITY
 SEND_LABEL
 :
    'send-label'
+;
+
+SEND_LIFETIME
+:
+   'send-lifetime'
 ;
 
 SENDER
@@ -3767,6 +4107,11 @@ SESSION_LIMIT
    'session-limit'
 ;
 
+SESSION_PROTECTION
+:
+   'session-protection'
+;
+
 SESSION_TIMEOUT
 :
    'session-timeout'
@@ -3785,6 +4130,11 @@ SET_OVERLOAD_BIT
 SETUP
 :
    'setup'
+;
+
+SEVERITY
+:
+   'severity'
 ;
 
 SFLOW
@@ -3817,9 +4167,29 @@ SHUTDOWN
    'shutdown'
 ;
 
+SIGNALLED_BANDWIDTH
+:
+   'signalled-bandwidth'
+;
+
+SIGNALLED_NAME
+:
+   'signalled-name'
+;
+
+SINGLE_CONNECTION
+:
+   'single-connection'
+;
+
 SINGLE_ROUTER_MODE
 :
    'single-router-mode'
+;
+
+SINGLE_TOPOLOGY
+:
+   'single-topology'
 ;
 
 SLA
@@ -3932,6 +4302,11 @@ SQLNET
    'sqlnet'
 ;
 
+SRLG
+:
+   'srlg'
+;
+
 SRR_QUEUE
 :
    'srr-queue'
@@ -3940,6 +4315,11 @@ SRR_QUEUE
 SSH
 :
    'ssh'
+;
+
+SSH_KEYDIR
+:
+   'ssh_keydir'
 ;
 
 SSL
@@ -4032,6 +4412,11 @@ SUBSCRIBE_TO_ALERT_GROUP
 SUBSCRIBER
 :
    'subscriber'
+;
+
+SUMMARY_ADDRESS
+:
+   'summary-address'
 ;
 
 SUMMARY_ONLY
@@ -4144,6 +4529,11 @@ TALK
    'talk'
 ;
 
+TASKGROUP
+:
+   'taskgroup'
+;
+
 TB_VLAN1
 :
    'tb-vlan1'
@@ -4249,6 +4639,11 @@ TIMERS
    'timers'
 ;
 
+TIMESTAMP
+:
+   'timestamp'
+;
+
 TIMING
 :
    'timing'
@@ -4282,6 +4677,11 @@ TRACK
 TRACKED
 :
    'tracked'
+;
+
+TRAFFIC_ENG
+:
+   'traffic-eng'
 ;
 
 TRANSCEIVER
@@ -4349,6 +4749,11 @@ TUNNEL_GROUP_LIST
    'tunnel-group-list'
 ;
 
+TUNNEL_ID
+:
+   'tunnel-id'
+;
+
 TX_QUEUE
 :
    'tx-queue'
@@ -4377,6 +4782,11 @@ UDP
 UDP_JITTER
 :
    'udp-jitter'
+;
+
+UID
+:
+   'uid'
 ;
 
 UNABLE
@@ -4409,6 +4819,11 @@ UNICAST
    'unicast'
 ;
 
+UPDATE_CALENDAR
+:
+   'update-calendar'
+;
+
 UPDATE_SOURCE
 :
    'update-source' -> pushMode(M_Interface)
@@ -4429,9 +4844,19 @@ USER_IDENTITY
    'user-identity'
 ;
 
+USERGROUP
+:
+   'usergroup'
+;
+
 USERNAME
 :
    'username'
+;
+
+USERS
+:
+   'users'
 ;
 
 UUCP
@@ -4487,6 +4912,16 @@ VIRTUAL_TEMPLATE
 VLAN
 :
    'vlan'
+;
+
+VM_CPU
+:
+   'vm-cpu'
+;
+
+VM_MEMORY
+:
+   'vm-memory'
 ;
 
 VMPS
@@ -4574,6 +5009,11 @@ VSERVER
 VTP
 :
    'vtp'
+;
+
+VTY_POOL
+:
+   'vty-pool'
 ;
 
 WEBVPN
@@ -5315,6 +5755,7 @@ M_BANNER_ESCAPE_C
 :
    (
       '^C'
+      | ('^' F_Newline+)
       | '\u0003'
    ) -> type(ESCAPE_C), mode(M_MOTD_C)
 ;
@@ -5525,6 +5966,7 @@ M_MOTD_C_ESCAPE_C
 :
    (
       '^C'
+      | 'cC'
       | '\u0003'
    ) -> type(ESCAPE_C), mode(DEFAULT_MODE)
 ;
@@ -5535,7 +5977,11 @@ M_MOTD_C_MOTD
       (
          '^' ~[^C\u0003]
       )
-      | ~[^\u0003]
+      |
+      (
+         'c' ~[^C\u0003]
+      )
+      | ~[c^\u0003]
    )+
 ;
 

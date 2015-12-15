@@ -6,6 +6,21 @@ options {
    tokenVocab = FlatJuniperLexer;
 }
 
+apsendt_path_count
+:
+   PATH_COUNT count = DEC
+;
+
+apsendt_prefix_policy
+:
+   PREFIX_POLICY policy = variable
+;
+
+bfi6t_any
+:
+   ANY s_null_filler
+;
+
 bfi6t_null
 :
    LABELED_UNICAST s_null_filler
@@ -33,6 +48,21 @@ bfit_flow
    FLOW s_null_filler
 ;
 
+bfit_labeled_unicast
+:
+   LABELED_UNICAST s_null_filler
+;
+
+bfit_any
+:
+   ANY s_null_filler
+;
+
+bfit_multicast
+:
+   MULTICAST s_null_filler
+;
+
 bfit_unicast
 :
    UNICAST bfit_unicast_tail
@@ -47,9 +77,31 @@ bfit_unicast_tail
    | bfiut_rib_group
 ;
 
+bfiuapt_receive
+:
+   RECEIVE
+;
+
+bfiuapt_send
+:
+   SEND bfiuapt_send_tail
+;
+
+bfiuapt_send_tail
+:
+   apsendt_path_count
+   | apsendt_prefix_policy
+;
+
 bfiut_add_path
 :
-   ADD_PATH RECEIVE
+   ADD_PATH bfiut_add_path_tail
+;
+
+bfiut_add_path_tail
+:
+   bfiuapt_receive
+   | bfiuapt_send
 ;
 
 bfiut_prefix_limit
@@ -69,7 +121,10 @@ bft_inet
 
 bft_inet_tail
 :
-   bfit_flow
+   bfit_any
+   | bfit_flow
+   | bfit_labeled_unicast
+   | bfit_multicast
    | bfit_unicast
 ;
 
@@ -80,15 +135,19 @@ bft_inet6
 
 bft_inet6_tail
 :
-   bfi6t_null
+   bfi6t_any
+   | bfi6t_null
    | bfi6t_unicast
 ;
 
 bft_null
 :
    (
-      INET_VPN
+      INET_MDT
+      | INET_MVPN
+      | INET_VPN
       | INET6_VPN
+      | L2VPN
    ) s_null_filler
 ;
 
@@ -102,9 +161,24 @@ bmt_ttl
    TTL DEC
 ;
 
+bpast_as
+:
+   as = DEC
+;
+
 bt_advertise_inactive
 :
    ADVERTISE_INACTIVE
+;
+
+bt_advertise_peer_as
+:
+   ADVERTISE_PEER_AS
+;
+
+bt_apply_groups
+:
+   s_apply_groups
 ;
 
 bt_as_override
@@ -120,10 +194,13 @@ bt_cluster
 bt_common
 :
    bt_advertise_inactive
+   | bt_advertise_peer_as
+   | bt_apply_groups
    | bt_as_override
    | bt_cluster
    | bt_damping
    | bt_description
+   | bt_disable_4byte_as
    | bt_export
    | bt_family
    | bt_import
@@ -131,10 +208,13 @@ bt_common
    | bt_local_as
    | bt_multihop
    | bt_multipath
+   | bt_no_client_reflect
    | bt_null
+   | bt_passive
    | bt_path_selection
    | bt_peer_as
    | bt_remove_private
+   | bt_tcp_mss
    | bt_type
 ;
 
@@ -146,6 +226,11 @@ bt_damping
 bt_description
 :
    s_description
+;
+
+bt_disable_4byte_as
+:
+   DISABLE_4BYTE_AS
 ;
 
 bt_enable
@@ -181,7 +266,9 @@ bt_group
 
 bt_group_tail
 :
-   bt_common
+// intentional blank
+
+   | bt_common
    | bt_neighbor
 ;
 
@@ -196,12 +283,17 @@ bt_local_address
    (
       IP_ADDRESS
       | IPV6_ADDRESS
-   )
+   )?
 ;
 
 bt_local_as
 :
-   LOCAL_AS as = DEC
+   LOCAL_AS bt_local_as_tail
+;
+
+bt_local_as_tail
+:
+   last_number? last_common*
 ;
 
 bt_multihop
@@ -228,6 +320,7 @@ bt_neighbor
    (
       IP_ADDRESS
       | IPV6_ADDRESS
+      | WILDCARD
    ) bt_neighbor_tail
 ;
 
@@ -238,15 +331,29 @@ bt_neighbor_tail
    | bt_common
 ;
 
+bt_no_client_reflect
+:
+   NO_CLIENT_REFLECT
+;
+
 bt_null
 :
    (
       AUTHENTICATION_KEY
       | BFD_LIVENESS_DETECTION
       | HOLD_TIME
+      | KEEP
       | LOG_UPDOWN
+      | MTU_DISCOVERY
+      | OUT_DELAY
+      | PRECISION_TIMERS
       | TRACEOPTIONS
    ) s_null_filler
+;
+
+bt_passive
+:
+   PASSIVE
 ;
 
 bt_path_selection
@@ -261,12 +368,24 @@ bt_path_selection_tail
 
 bt_peer_as
 :
-   PEER_AS as = DEC
+   PEER_AS bt_peer_as_tail
+;
+
+bt_peer_as_tail
+:
+// intentional blank
+
+   | bpast_as
 ;
 
 bt_remove_private
 :
    'remove-private'
+;
+
+bt_tcp_mss
+:
+   TCP_MSS DEC
 ;
 
 bt_type
@@ -278,27 +397,31 @@ bt_type
    )
 ;
 
-pe_conjunction
+last_alias
 :
-   OPEN_PAREN policy_expression DOUBLE_AMPERSAND policy_expression CLOSE_PAREN
+   ALIAS
 ;
 
-pe_disjunction
+last_common
 :
-   OPEN_PAREN policy_expression DOUBLE_PIPE policy_expression CLOSE_PAREN
+   last_alias
+   | last_loops
+   | last_private
 ;
 
-pe_nested
+last_loops
 :
-   OPEN_PAREN policy_expression CLOSE_PAREN
+   LOOPS DEC
 ;
 
-policy_expression
+last_number
 :
-   pe_conjunction
-   | pe_disjunction
-   | pe_nested
-   | variable
+   as = DEC
+;
+
+last_private
+:
+   PRIVATE
 ;
 
 pst_always_compare_med

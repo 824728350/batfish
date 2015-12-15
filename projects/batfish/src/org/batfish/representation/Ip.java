@@ -2,7 +2,7 @@ package org.batfish.representation;
 
 import java.io.Serializable;
 
-import org.batfish.util.Util;
+import org.batfish.common.BatfishException;
 
 public class Ip implements Comparable<Ip>, Serializable {
 
@@ -14,12 +14,36 @@ public class Ip implements Comparable<Ip>, Serializable {
 
    private static long ipStrToLong(String addr) {
       String[] addrArray = addr.split("\\.");
+      if (addrArray.length != 4) {
+         throw new BatfishException("Invalid ip string: \"" + addr + "\"");
+      }
       long num = 0;
       for (int i = 0; i < addrArray.length; i++) {
          int power = 3 - i;
-         num += ((Integer.parseInt(addrArray[i]) % 256 * Math.pow(256, power)));
+         String segmentStr = addrArray[i];
+         try {
+            int segment = Integer.parseInt(segmentStr);
+            num += ((segment % 256 * Math.pow(256, power)));
+         }
+         catch (NumberFormatException e) {
+            throw new BatfishException("Invalid ip segment: \"" + segmentStr
+                  + "\" in ip string: \"" + addr + "\"", e);
+         }
       }
       return num;
+   }
+
+   private static long numSubnetBitsToSubnetLong(int numBits) {
+      long val = 0;
+      for (int i = 31; i > 31 - numBits; i--) {
+         val |= ((long) 1 << i);
+      }
+      return val;
+   }
+
+   public static Ip numSubnetBitsToSubnetMask(int numBits) {
+      long mask = numSubnetBitsToSubnetLong(numBits);
+      return new Ip(mask);
    }
 
    private final int _hashCode;
@@ -68,7 +92,7 @@ public class Ip implements Comparable<Ip>, Serializable {
    }
 
    public Ip getNetworkAddress(int subnetBits) {
-      long mask = Util.numSubnetBitsToSubnetLong(subnetBits);
+      long mask = numSubnetBitsToSubnetLong(subnetBits);
       return new Ip(_ip & mask);
    }
 
@@ -122,9 +146,17 @@ public class Ip implements Comparable<Ip>, Serializable {
 
    @Override
    public String toString() {
-      return ((_ip >> 24) & 0xFF) + "." + ((_ip >> 16) & 0xFF) + "."
-            + ((_ip >> 8) & 0xFF) + "." + (_ip & 0xFF);
+      if (!valid()) {
+         return "INVALID_IP(" + _ip + "l)";
+      }
+      else {
+         return ((_ip >> 24) & 0xFF) + "." + ((_ip >> 16) & 0xFF) + "."
+               + ((_ip >> 8) & 0xFF) + "." + (_ip & 0xFF);
+      }
+   }
 
+   public boolean valid() {
+      return _ip >= 0 && _ip <= 0xFFFFFFFFl;
    }
 
 }

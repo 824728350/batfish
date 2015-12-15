@@ -33,9 +33,18 @@ fwfromt_destination_port
    )
 ;
 
+fwfromt_destination_port_except
+:
+   DESTINATION_PORT_EXCEPT
+   (
+      port
+      | range
+   )
+;
+
 fwfromt_destination_prefix_list
 :
-   DESTINATION_PREFIX_LIST variable
+   DESTINATION_PREFIX_LIST variable EXCEPT?
 ;
 
 fwfromt_dscp
@@ -48,6 +57,16 @@ fwfromt_exp
    EXP DEC
 ;
 
+fwfromt_first_fragment
+:
+   FIRST_FRAGMENT
+;
+
+fwfromt_forwarding_class
+:
+   FORWARDING_CLASS variable
+;
+
 fwfromt_icmp_code
 :
    ICMP_CODE icmp_code
@@ -56,6 +75,16 @@ fwfromt_icmp_code
 fwfromt_icmp_type
 :
    ICMP_TYPE icmp_type
+;
+
+fwfromt_ip_options
+:
+   IP_OPTIONS ip_option
+;
+
+fwfromt_learn_vlan_1p_priority
+:
+   LEARN_VLAN_1P_PRIORITY DEC
 ;
 
 fwfromt_next_header
@@ -75,6 +104,11 @@ fwfromt_port
       port
       | range
    )
+;
+
+fwfromt_precedence
+:
+   PRECEDENCE precedence = DEC
 ;
 
 fwfromt_prefix_list
@@ -120,6 +154,21 @@ fwfromt_tcp_flags
    TCP_FLAGS DOUBLE_QUOTED_STRING
 ;
 
+fwfromt_tcp_initial
+:
+   TCP_INITIAL
+;
+
+fwfromt_vlan
+:
+   VLAN name = variable
+;
+
+fwft_apply_groups
+:
+   s_apply_groups
+;
+
 fwft_interface_specific
 :
    INTERFACE_SPECIFIC
@@ -136,11 +185,21 @@ fwft_term_tail
    | fwtt_then
 ;
 
+fwt_common
+:
+   fwt_filter
+   | fwt_null
+;
+
 fwt_family
 :
    FAMILY
    (
-      INET
+      ANY
+      | BRIDGE
+      | CCC
+      | ETHERNET_SWITCHING
+      | INET
       | INET6
       | MPLS
    ) fwt_family_tail
@@ -148,7 +207,7 @@ fwt_family
 
 fwt_family_tail
 :
-   fwt_filter
+   fwt_common
 ;
 
 fwt_filter
@@ -158,7 +217,8 @@ fwt_filter
 
 fwt_filter_tail
 :
-   fwft_interface_specific
+   fwft_apply_groups
+   | fwft_interface_specific
    | fwft_term
 ;
 
@@ -166,6 +226,7 @@ fwt_null
 :
    (
       POLICER
+      | SERVICE_FILTER
    ) s_null_filler
 ;
 
@@ -179,12 +240,23 @@ fwthent_discard
    DISCARD
 ;
 
+fwthent_loss_priority
+:
+   LOSS_PRIORITY
+   (
+      HIGH
+      | MEDIUM_HIGH
+      | MEDIUM_LOW
+      | LOW
+   )
+;
+
 fwthent_next_term
 :
    NEXT TERM
 ;
 
-fwthent_null
+fwthent_nop
 :
    (
       COUNT
@@ -192,15 +264,24 @@ fwthent_null
       | FORWARDING_CLASS
       | LOG
       | POLICER
-      | ROUTING_INSTANCE
       | SAMPLE
       | SYSLOG
    ) s_null_filler
 ;
 
+fwthent_port_mirror
+:
+   PORT_MIRROR
+;
+
 fwthent_reject
 :
    REJECT
+;
+
+fwthent_routing_instance
+:
+   ROUTING_INSTANCE s_null_filler
 ;
 
 fwtt_from
@@ -213,14 +294,20 @@ fwtt_from_tail
    fwfromt_address
    | fwfromt_destination_address
    | fwfromt_destination_port
+   | fwfromt_destination_port_except
    | fwfromt_destination_prefix_list
    | fwfromt_dscp
    | fwfromt_exp
+   | fwfromt_first_fragment
+   | fwfromt_forwarding_class
    | fwfromt_icmp_code
    | fwfromt_icmp_type
+   | fwfromt_ip_options
+   | fwfromt_learn_vlan_1p_priority
    | fwfromt_next_header
    | fwfromt_null
    | fwfromt_port
+   | fwfromt_precedence
    | fwfromt_prefix_list
    | fwfromt_protocol
    | fwfromt_source_address
@@ -228,6 +315,8 @@ fwtt_from_tail
    | fwfromt_source_prefix_list
    | fwfromt_tcp_established
    | fwfromt_tcp_flags
+   | fwfromt_tcp_initial
+   | fwfromt_vlan
 ;
 
 fwtt_then
@@ -239,9 +328,12 @@ fwtt_then_tail
 :
    fwthent_accept
    | fwthent_discard
-   | fwthent_reject
+   | fwthent_loss_priority
    | fwthent_next_term
-   | fwthent_null
+   | fwthent_nop
+   | fwthent_port_mirror
+   | fwthent_reject
+   | fwthent_routing_instance
 ;
 
 s_firewall
@@ -251,7 +343,6 @@ s_firewall
 
 s_firewall_tail
 :
-   fwt_family
-   | fwt_filter
-   | fwt_null
+   fwt_common
+   | fwt_family
 ;

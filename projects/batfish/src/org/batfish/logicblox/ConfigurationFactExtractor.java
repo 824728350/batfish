@@ -1,13 +1,14 @@
 package org.batfish.logicblox;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import org.batfish.collections.RoleSet;
-import org.batfish.main.BatfishException;
+import org.batfish.common.BatfishException;
+import org.batfish.main.Warnings;
 import org.batfish.representation.AsPathAccessList;
 import org.batfish.representation.AsPathAccessListLine;
 import org.batfish.representation.BgpNeighbor;
@@ -21,13 +22,19 @@ import org.batfish.representation.Ip;
 import org.batfish.representation.IpAccessList;
 import org.batfish.representation.IpAccessListLine;
 import org.batfish.representation.IpProtocol;
+import org.batfish.representation.IsisInterfaceMode;
+import org.batfish.representation.IsisLevel;
+import org.batfish.representation.IsisProcess;
 import org.batfish.representation.OriginType;
 import org.batfish.representation.OspfArea;
 import org.batfish.representation.OspfMetricType;
 import org.batfish.representation.OspfProcess;
 import org.batfish.representation.PolicyMap;
+import org.batfish.representation.PolicyMapAction;
 import org.batfish.representation.PolicyMapClause;
+import org.batfish.representation.PolicyMapClauseMatchInterfaceLine;
 import org.batfish.representation.PolicyMapMatchAsPathAccessListLine;
+import org.batfish.representation.PolicyMapMatchColorLine;
 import org.batfish.representation.PolicyMapMatchCommunityListLine;
 import org.batfish.representation.PolicyMapMatchIpAccessListLine;
 import org.batfish.representation.PolicyMapMatchLine;
@@ -44,8 +51,8 @@ import org.batfish.representation.PolicyMapSetLocalPreferenceLine;
 import org.batfish.representation.PolicyMapSetMetricLine;
 import org.batfish.representation.PolicyMapSetNextHopLine;
 import org.batfish.representation.PolicyMapSetOriginTypeLine;
+import org.batfish.representation.PolicyMapSetLevelLine;
 import org.batfish.representation.Prefix;
-import org.batfish.representation.RouteFilterLengthRangeLine;
 import org.batfish.representation.RouteFilterLine;
 import org.batfish.representation.RouteFilterList;
 import org.batfish.representation.RoutingProtocol;
@@ -61,55 +68,20 @@ public class ConfigurationFactExtractor {
 
    private static final String FLOW_SINK_INTERFACE_PREFIX = "TenGigabitEthernet100/";
 
-   private static String getLBRoutingProtocol(RoutingProtocol prot) {
-      switch (prot) {
-      case AGGREGATE:
-         return "aggregate";
-      case BGP:
-         return "bgp";
-      case CONNECTED:
-         return "connected";
-      case EGP:
-         return "egp";
-      case IBGP:
-         return "ibgp";
-      case IGP:
-         return "igp";
-      case ISIS:
-         return "isis";
-      case LOCAL:
-         return "local";
-      case MSDP:
-         return "msdp";
-      case OSPF:
-         return "ospf";
-      case OSPF_E1:
-         return "ospfE1";
-      case OSPF_E2:
-         return "ospfE2";
-      case STATIC:
-         return "static";
-      default:
-         break;
-      }
-      return null;
-   }
-
    private Set<Long> _allCommunities;
+
    private Configuration _configuration;
+
    private Map<String, StringBuilder> _factBins;
-   private List<String> _warnings;
+
+   private Warnings _w;
 
    public ConfigurationFactExtractor(Configuration c, Set<Long> allCommunities,
-         Map<String, StringBuilder> factBins) {
+         Map<String, StringBuilder> factBins, Warnings warnings) {
       _configuration = c;
       _allCommunities = allCommunities;
       _factBins = factBins;
-      _warnings = new ArrayList<String>();
-   }
-
-   public List<String> getWarnings() {
-      return _warnings;
+      _w = warnings;
    }
 
    private void writeAsPaths() {
@@ -198,7 +170,7 @@ public class ConfigurationFactExtractor {
          for (GeneratedRoute gr : proc.getGeneratedRoutes()) {
             long network_start = gr.getPrefix().getAddress().asLong();
             int prefix_length = gr.getPrefix().getPrefixLength();
-            long network_end = Util.getNetworkEnd(network_start, prefix_length);
+            long network_end = gr.getPrefix().getEndAddress().asLong();
             wSetBgpGeneratedRoute_flat.append(hostname + "|" + network_start
                   + "|" + network_end + "|" + prefix_length + "\n");
             wSetNetwork.append(network_start + "|" + network_start + "|"
@@ -222,22 +194,26 @@ public class ConfigurationFactExtractor {
             .get("SetBgpNeighborGeneratedRoutePolicy_flat");
       if (proc != null) {
          for (BgpNeighbor neighbor : proc.getNeighbors().values()) {
-            Long neighborIp = neighbor.getAddress().asLong();
+            Prefix neighborPrefix = neighbor.getPrefix();
+            long neighborPrefixStart = neighborPrefix.getAddress().asLong();
+            long neighborPrefixEnd = neighborPrefix.getEndAddress().asLong();
+            int neighborPrefixLength = neighborPrefix.getPrefixLength();
             for (GeneratedRoute gr : neighbor.getGeneratedRoutes()) {
                long network_start = gr.getPrefix().getAddress().asLong();
                int prefix_length = gr.getPrefix().getPrefixLength();
-               long network_end = Util.getNetworkEnd(network_start,
-                     prefix_length);
+               long network_end = gr.getPrefix().getEndAddress().asLong();
                wSetBgpNeighborGeneratedRoute_flat.append(hostname + "|"
-                     + neighborIp + "|" + network_start + "|" + network_end
-                     + "|" + prefix_length + "\n");
+                     + neighborPrefixStart + "|" + neighborPrefixEnd + "|"
+                     + neighborPrefixLength + "|" + network_start + "|"
+                     + network_end + "|" + prefix_length + "\n");
                for (PolicyMap generationPolicy : gr.getGenerationPolicies()) {
                   String gpName = hostname + ":"
                         + generationPolicy.getMapName();
                   wSetBgpNeighborGeneratedRoutePolicy_flat.append(hostname
-                        + "|" + neighborIp + "|" + network_start + "|"
-                        + network_end + "|" + prefix_length + "|" + gpName
-                        + "\n");
+                        + "|" + neighborPrefixStart + "|" + neighborPrefixEnd
+                        + "|" + neighborPrefixLength + "|" + network_start
+                        + "|" + network_end + "|" + prefix_length + "|"
+                        + gpName + "\n");
                }
             }
          }
@@ -245,36 +221,44 @@ public class ConfigurationFactExtractor {
    }
 
    private void writeBgpNeighborPolicies() {
-      StringBuilder wSetBgpImportPolicy = _factBins.get("SetBgpImportPolicy");
-      StringBuilder wSetBgpExportPolicy = _factBins.get("SetBgpExportPolicy");
+      StringBuilder wSetBgpImportPolicy = _factBins
+            .get("SetBgpImportPolicy_flat");
+      StringBuilder wSetBgpExportPolicy = _factBins
+            .get("SetBgpExportPolicy_flat");
       String hostname = _configuration.getHostname();
       BgpProcess proc = _configuration.getBgpProcess();
       if (proc != null) {
          for (BgpNeighbor neighbor : proc.getNeighbors().values()) {
-            Ip neighborAddress = neighbor.getAddress();
+            Prefix neighborPrefix = neighbor.getPrefix();
+            long neighborPrefixStart = neighborPrefix.getAddress().asLong();
+            long neighborPrefixEnd = neighborPrefix.getEndAddress().asLong();
+            int neighborPrefixLength = neighborPrefix.getPrefixLength();
             for (PolicyMap inboundMap : neighbor.getInboundPolicyMaps()) {
                String inboundMapName = hostname + ":" + inboundMap.getMapName();
-               wSetBgpImportPolicy.append(hostname + "|"
-                     + neighborAddress.asLong() + "|" + inboundMapName + "\n");
+               wSetBgpImportPolicy.append(hostname + "|" + neighborPrefixStart
+                     + "|" + neighborPrefixEnd + "|" + neighborPrefixLength
+                     + "|" + inboundMapName + "\n");
             }
             for (PolicyMap outboundMap : neighbor.getOutboundPolicyMaps()) {
                String outboundMapName = hostname + ":"
                      + outboundMap.getMapName();
-               wSetBgpExportPolicy.append(hostname + "|"
-                     + neighborAddress.asLong() + "|" + outboundMapName + "\n");
+               wSetBgpExportPolicy.append(hostname + "|" + neighborPrefixStart
+                     + "|" + neighborPrefixEnd + "|" + neighborPrefixLength
+                     + "|" + outboundMapName + "\n");
             }
          }
       }
    }
 
    private void writeBgpNeighbors() {
-      StringBuilder wSetBgpNeighborIp = _factBins.get("SetBgpNeighborIp");
-      StringBuilder wSetLocalAs = _factBins.get("SetLocalAs");
-      StringBuilder wSetRemoteAs = _factBins.get("SetRemoteAs");
+      StringBuilder wSetBgpNeighborIp = _factBins
+            .get("SetBgpNeighborNetwork_flat");
+      StringBuilder wSetLocalAs = _factBins.get("SetLocalAs_flat");
+      StringBuilder wSetRemoteAs = _factBins.get("SetRemoteAs_flat");
       StringBuilder wSetBgpNeighborDefaultMetric = _factBins
-            .get("SetBgpNeighborDefaultMetric");
+            .get("SetBgpNeighborDefaultMetric_flat");
       StringBuilder wSetBgpNeighborSendCommunity = _factBins
-            .get("SetBgpNeighborSendCommunity");
+            .get("SetBgpNeighborSendCommunity_flat");
       String hostname = _configuration.getHostname();
       BgpProcess proc = _configuration.getBgpProcess();
       if (proc != null) {
@@ -282,18 +266,48 @@ public class ConfigurationFactExtractor {
             int remoteAs = neighbor.getRemoteAs();
             int localAs = neighbor.getLocalAs();
             int defaultMetric = neighbor.getDefaultMetric();
-            Ip neighborIp = neighbor.getAddress();
-            wSetBgpNeighborIp.append(hostname + "|" + neighborIp.asLong()
-                  + "\n");
-            wSetLocalAs.append(hostname + "|" + neighborIp.asLong() + "|"
+            Prefix neighborPrefix = neighbor.getPrefix();
+            long neighborPrefixStart = neighborPrefix.getAddress().asLong();
+            long neighborPrefixEnd = neighborPrefix.getEndAddress().asLong();
+            int neighborPrefixLength = neighborPrefix.getPrefixLength();
+            wSetBgpNeighborIp.append(hostname + "|" + neighborPrefixStart + "|"
+                  + neighborPrefixEnd + "|" + neighborPrefixLength + "\n");
+            wSetLocalAs.append(hostname + "|" + neighborPrefixStart + "|"
+                  + neighborPrefixEnd + "|" + neighborPrefixLength + "|"
                   + localAs + "\n");
-            wSetRemoteAs.append(hostname + "|" + neighborIp.asLong() + "|"
+            wSetRemoteAs.append(hostname + "|" + neighborPrefixStart + "|"
+                  + neighborPrefixEnd + "|" + neighborPrefixLength + "|"
                   + remoteAs + "\n");
             wSetBgpNeighborDefaultMetric.append(hostname + "|"
-                  + neighborIp.asLong() + "|" + defaultMetric + "\n");
+                  + neighborPrefixStart + "|" + neighborPrefixEnd + "|"
+                  + neighborPrefixLength + "|" + defaultMetric + "\n");
             if (neighbor.getSendCommunity()) {
                wSetBgpNeighborSendCommunity.append(hostname + "|"
-                     + neighborIp.asLong() + "\n");
+                     + neighborPrefixStart + "|" + neighborPrefixEnd + "|"
+                     + neighborPrefixLength + "\n");
+            }
+         }
+      }
+   }
+
+   private void writeBgpOriginationPolicies() {
+      StringBuilder wSetBgpOriginationPolicy = _factBins
+            .get("SetBgpOriginationPolicy_flat");
+      String hostname = _configuration.getHostname();
+      BgpProcess proc = _configuration.getBgpProcess();
+      if (proc != null) {
+         for (BgpNeighbor neighbor : proc.getNeighbors().values()) {
+            Prefix neighborPrefix = neighbor.getPrefix();
+            long neighborPrefixStart = neighborPrefix.getAddress().asLong();
+            long neighborPrefixEnd = neighborPrefix.getEndAddress().asLong();
+            int neighborPrefixLength = neighborPrefix.getPrefixLength();
+            for (PolicyMap originationPolicy : neighbor
+                  .getOriginationPolicies()) {
+               String policyName = hostname + ":"
+                     + originationPolicy.getMapName();
+               wSetBgpOriginationPolicy.append(hostname + "|"
+                     + neighborPrefixStart + "|" + neighborPrefixEnd + "|"
+                     + neighborPrefixLength + "|" + policyName + "\n");
             }
          }
       }
@@ -348,13 +362,16 @@ public class ConfigurationFactExtractor {
       writePolicyMaps();
       writeBgpNeighbors();
       writeRouteFilters();
-      writeOriginationPolicies();
+      writeBgpOriginationPolicies();
       writeCommunityLists();
       writeBgpGeneratedRoutes();
       writeBgpNeighborGeneratedRoutes();
       writeGeneratedRoutes();
       writeVlanInterface();
       writeAsPaths();
+      writeIsis();
+      writeIsisOutboundPolicyMaps();
+      writeIsisGeneratedRoutes();
    }
 
    private void writeGeneratedRoutes() {
@@ -371,7 +388,7 @@ public class ConfigurationFactExtractor {
       for (GeneratedRoute gr : _configuration.getGeneratedRoutes()) {
          long network_start = gr.getPrefix().getAddress().asLong();
          int prefix_length = gr.getPrefix().getPrefixLength();
-         long network_end = Util.getNetworkEnd(network_start, prefix_length);
+         long network_end = gr.getPrefix().getEndAddress().asLong();
          wSetGeneratedRoute_flat.append(hostname + "|" + network_start + "|"
                + network_end + "|" + prefix_length + "|"
                + gr.getAdministrativeCost() + "\n");
@@ -486,7 +503,7 @@ public class ConfigurationFactExtractor {
             IpAccessListLine line = lines.get(i);
             String invalidMessage = line.getInvalidMessage();
             if (invalidMessage != null) {
-               _warnings.add("WARNING: IpAccessList " + name + " line " + i
+               _w.redFlag("IpAccessList " + name + " line " + i
                      + ": disabled: " + invalidMessage + "\n");
                continue;
             }
@@ -534,6 +551,158 @@ public class ConfigurationFactExtractor {
       }
    }
 
+   private void writeIsis() {
+      StringBuilder wSetIsisL1Node = _factBins.get("SetIsisL1Node");
+      StringBuilder wSetIsisL2Node = _factBins.get("SetIsisL2Node");
+      StringBuilder wSetIsisArea = _factBins.get("SetIsisArea");
+      StringBuilder wSetIsisInterfaceCost = _factBins
+            .get("SetIsisInterfaceCost");
+      StringBuilder wSetIsisL1PassiveInterface = _factBins
+            .get("SetIsisL1PassiveInterface");
+      StringBuilder wSetIsisL2PassiveInterface = _factBins
+            .get("SetIsisL2PassiveInterface");
+      StringBuilder wSetIsisL1ActiveInterface = _factBins
+            .get("SetIsisL1ActiveInterface");
+      StringBuilder wSetIsisL2ActiveInterface = _factBins
+            .get("SetIsisL2ActiveInterface");
+      String hostname = _configuration.getHostname();
+      IsisProcess proc = _configuration.getIsisProcess();
+      if (proc != null) {
+         for (Interface iface : _configuration.getInterfaces().values()) {
+            IsisInterfaceMode l1Mode = iface.getIsisL1InterfaceMode();
+            IsisInterfaceMode l2Mode = iface.getIsisL2InterfaceMode();
+            String ifaceName = iface.getName();
+            switch (l1Mode) {
+            case PASSIVE:
+               wSetIsisL1PassiveInterface.append(hostname + "|" + ifaceName
+                     + "\n");
+            case ACTIVE:
+               wSetIsisL1ActiveInterface.append(hostname + "|" + ifaceName
+                     + "\n");
+               Integer isisCost = iface.getIsisCost();
+               if (isisCost == null) {
+                  isisCost = IsisProcess.DEFAULT_ISIS_INTERFACE_COST;
+               }
+               wSetIsisInterfaceCost.append(hostname + "|" + ifaceName + "|"
+                     + isisCost + "\n");
+               break;
+            case UNSET:
+               break;
+            default:
+               throw new BatfishException("Bad IS-IS mode");
+            }
+            switch (l2Mode) {
+            case PASSIVE:
+               wSetIsisL2PassiveInterface.append(hostname + "|" + ifaceName
+                     + "\n");
+            case ACTIVE:
+               wSetIsisL2ActiveInterface.append(hostname + "|" + ifaceName
+                     + "\n");
+               Integer isisCost = iface.getIsisCost();
+               if (isisCost == null) {
+                  isisCost = IsisProcess.DEFAULT_ISIS_INTERFACE_COST;
+               }
+               wSetIsisInterfaceCost.append(hostname + "|" + ifaceName + "|"
+                     + isisCost + "\n");
+               break;
+            case UNSET:
+               break;
+            default:
+               throw new BatfishException("Bad IS-IS mode");
+            }
+         }
+         boolean level1 = false;
+         boolean level2 = false;
+         switch (proc.getLevel()) {
+         case LEVEL_1:
+            level1 = true;
+            break;
+         case LEVEL_1_2:
+            level1 = true;
+            level2 = true;
+            break;
+         case LEVEL_2:
+            level2 = true;
+            break;
+         default:
+            throw new BatfishException("Invalid IS-IS level");
+         }
+         if (level1) {
+            wSetIsisL1Node.append(hostname + "\n");
+         }
+         if (level2) {
+            wSetIsisL2Node.append(hostname + "\n");
+         }
+         String area = proc.getNetAddress().getAreaIdStr();
+         wSetIsisArea.append(hostname + "|" + area + "\n");
+      }
+   }
+
+   private void writeIsisGeneratedRoutes() {
+      StringBuilder wSetIsisGeneratedRoute_flat = _factBins
+            .get("SetIsisGeneratedRoute_flat");
+      StringBuilder wSetIsisGeneratedRoutePolicy_flat = _factBins
+            .get("SetIsisGeneratedRoutePolicy_flat");
+      StringBuilder wSetNetwork = _factBins.get("SetNetwork");
+      String hostname = _configuration.getHostname();
+      IsisProcess proc = _configuration.getIsisProcess();
+      if (proc != null) {
+         for (GeneratedRoute gr : proc.getGeneratedRoutes()) {
+            long network_start = gr.getPrefix().getAddress().asLong();
+            int prefix_length = gr.getPrefix().getPrefixLength();
+            long network_end = gr.getPrefix().getEndAddress().asLong();
+            wSetIsisGeneratedRoute_flat.append(hostname + "|" + network_start
+                  + "|" + network_end + "|" + prefix_length + "\n");
+            wSetNetwork.append(network_start + "|" + network_start + "|"
+                  + network_end + "|" + prefix_length + "\n");
+            for (PolicyMap generationPolicy : gr.getGenerationPolicies()) {
+               String gpName = hostname + ":" + generationPolicy.getMapName();
+               wSetIsisGeneratedRoutePolicy_flat.append(hostname + "|"
+                     + network_start + "|" + network_end + "|" + prefix_length
+                     + "|" + gpName + "\n");
+            }
+         }
+      }
+   }
+
+   private void writeIsisOutboundPolicyMaps() {
+      StringBuilder wSetIsisOutboundPolicyMap = _factBins
+            .get("SetIsisOutboundPolicyMap");
+      StringBuilder wSetPolicyMapIsisExternalRouteType = _factBins
+            .get("SetPolicyMapIsisExternalRouteType");
+      String hostname = _configuration.getHostname();
+      IsisProcess proc = _configuration.getIsisProcess();
+      if (proc != null) {
+         for (PolicyMap map : proc.getOutboundPolicyMaps()) {
+            String mapName = hostname + ":" + map.getMapName();
+            wSetIsisOutboundPolicyMap.append(hostname + "|" + mapName + "\n");
+            IsisLevel exportLevel = proc.getPolicyExportLevels().get(map);
+            if (exportLevel == null) {
+               continue;
+            }
+            Set<String> levels = new HashSet<String>();
+            switch (exportLevel) {
+            case LEVEL_1:
+               levels.add(RoutingProtocol.ISIS_L1.protocolName());
+               break;
+            case LEVEL_2:
+               levels.add(RoutingProtocol.ISIS_L2.protocolName());
+               break;
+            case LEVEL_1_2:
+               levels.add(RoutingProtocol.ISIS_L1.protocolName());
+               levels.add(RoutingProtocol.ISIS_L2.protocolName());
+               break;
+            default:
+               throw new BatfishException("invalid IS-IS level");
+            }
+            for (String level : levels) {
+               wSetPolicyMapIsisExternalRouteType.append(mapName + "|" + level
+                     + "\n");
+            }
+         }
+      }
+   }
+
    private void writeLinkLoadLimits() {
       StringBuilder wSetLinkLoadLimitIn = _factBins.get("SetLinkLoadLimitIn");
       StringBuilder wSetLinkLoadLimitOut = _factBins.get("SetLinkLoadLimitOut");
@@ -551,25 +720,6 @@ public class ConfigurationFactExtractor {
       }
    }
 
-   private void writeOriginationPolicies() {
-      StringBuilder wSetBgpOriginationPolicy = _factBins
-            .get("SetBgpOriginationPolicy");
-      String hostname = _configuration.getHostname();
-      BgpProcess proc = _configuration.getBgpProcess();
-      if (proc != null) {
-         for (BgpNeighbor neighbor : proc.getNeighbors().values()) {
-            for (PolicyMap originationPolicy : neighbor
-                  .getOriginationPolicies()) {
-               String policyName = hostname + ":"
-                     + originationPolicy.getMapName();
-               Long neighborIp = neighbor.getAddress().asLong();
-               wSetBgpOriginationPolicy.append(hostname + "|" + neighborIp
-                     + "|" + policyName + "\n");
-            }
-         }
-      }
-   }
-
    private void writeOspfGeneratedRoutes() {
       StringBuilder wSetOspfGeneratedRoute_flat = _factBins
             .get("SetOspfGeneratedRoute_flat");
@@ -582,7 +732,7 @@ public class ConfigurationFactExtractor {
          for (GeneratedRoute gr : proc.getGeneratedRoutes()) {
             long network_start = gr.getPrefix().getAddress().asLong();
             int prefix_length = gr.getPrefix().getPrefixLength();
-            long network_end = Util.getNetworkEnd(network_start, prefix_length);
+            long network_end = gr.getPrefix().getEndAddress().asLong();
             wSetOspfGeneratedRoute_flat.append(hostname + "|" + network_start
                   + "|" + network_end + "|" + prefix_length + "\n");
             wSetNetwork.append(network_start + "|" + network_start + "|"
@@ -678,6 +828,8 @@ public class ConfigurationFactExtractor {
             .get("SetPolicyMapClausePermit");
       StringBuilder wSetPolicyMapClauseSetCommunity = _factBins
             .get("SetPolicyMapClauseSetCommunity");
+      StringBuilder wSetPolicyMapClauseSetCommunityNone = _factBins
+            .get("SetPolicyMapClauseSetCommunityNone");
       StringBuilder wSetPolicyMapClauseSetLocalPreference = _factBins
             .get("SetPolicyMapClauseSetLocalPreference");
       StringBuilder wSetPolicyMapClauseSetMetric = _factBins
@@ -688,23 +840,36 @@ public class ConfigurationFactExtractor {
             .get("SetPolicyMapClauseSetNextHopIp");
       StringBuilder wSetPolicyMapClauseSetOriginType = _factBins
             .get("SetPolicyMapClauseSetOriginType");
+      StringBuilder wSetPolicyMapClauseSetProtocol = _factBins
+            .get("SetPolicyMapClauseSetProtocol");
+      StringBuilder wSetPolicyMapClauseMatchColor = _factBins
+            .get("SetPolicyMapClauseMatchColor");
+      StringBuilder wSetPolicyMapClauseMatchInterface = _factBins
+            .get("SetPolicyMapClauseMatchInterface");
       String hostname = _configuration.getHostname();
       for (PolicyMap map : _configuration.getPolicyMaps().values()) {
          String mapName = hostname + ":" + map.getMapName();
          List<PolicyMapClause> clauses = map.getClauses();
          for (int i = 0; i < clauses.size(); i++) {
             PolicyMapClause clause = clauses.get(i);
-            // match lines
-            // TODO: complete
-            switch (clause.getAction()) {
-            case DENY:
-               wSetPolicyMapClauseDeny.append(mapName + "|" + i + "\n");
-               break;
-            case PERMIT:
-               wSetPolicyMapClausePermit.append(mapName + "|" + i + "\n");
-               break;
-            default:
-               throw new BatfishException("invalid action");
+            PolicyMapAction action = clause.getAction();
+            if (action == null) {
+               _w.redFlag("missing action for policy map: \"" + mapName
+                     + "\", clause: " + i);
+            }
+            else {
+               // match lines
+               // TODO: complete
+               switch (action) {
+               case DENY:
+                  wSetPolicyMapClauseDeny.append(mapName + "|" + i + "\n");
+                  break;
+               case PERMIT:
+                  wSetPolicyMapClausePermit.append(mapName + "|" + i + "\n");
+                  break;
+               default:
+                  throw new BatfishException("invalid action");
+               }
             }
             for (PolicyMapMatchLine matchLine : clause.getMatchLines()) {
                switch (matchLine.getType()) {
@@ -755,7 +920,7 @@ public class ConfigurationFactExtractor {
                   PolicyMapMatchProtocolLine pmmpl = (PolicyMapMatchProtocolLine) matchLine;
                   RoutingProtocol prot = pmmpl.getProtocol();
                   wSetPolicyMapClauseMatchProtocol.append(mapName + "|" + i
-                        + "|" + getLBRoutingProtocol(prot) + "\n");
+                        + "|" + prot.protocolName() + "\n");
                   break;
 
                case ROUTE_FILTER_LIST:
@@ -773,6 +938,20 @@ public class ConfigurationFactExtractor {
                      wSetPolicyMapClauseMatchTag.append(mapName + "|" + i + "|"
                            + tag + "\n");
                   }
+                  break;
+
+               case COLOR:
+                  PolicyMapMatchColorLine pmmcl = (PolicyMapMatchColorLine) matchLine;
+                  int color = pmmcl.getColor();
+                  wSetPolicyMapClauseMatchColor.append(mapName + "|" + i + "|"
+                        + color + "\n");
+                  break;
+
+               case INTERFACE:
+                  PolicyMapClauseMatchInterfaceLine pmmil = (PolicyMapClauseMatchInterfaceLine) matchLine;
+                  String ifaceName = pmmil.getName();
+                  wSetPolicyMapClauseMatchInterface.append(mapName + "|" + i
+                        + "|" + ifaceName + "\n");
                   break;
 
                default:
@@ -794,8 +973,8 @@ public class ConfigurationFactExtractor {
                case AS_PATH_PREPEND:
                   // TODO: implement
                   // throw new BatfishException("not implemented");
-                  _warnings.add("WARNING: " + mapName + ":" + i
-                        + ": AS_PATH_PREPEND not implemented\n");
+                  _w.unimplemented(mapName + ":" + i
+                        + ": AS_PATH_PREPEND not implemented");
                   break;
 
                case COMMUNITY:
@@ -807,8 +986,9 @@ public class ConfigurationFactExtractor {
                   break;
 
                case COMMUNITY_NONE:
-                  // TODO: implement
-                  throw new BatfishException("not implemented");
+                  wSetPolicyMapClauseSetCommunityNone.append(mapName + "|" + i
+                        + "\n");
+                  break;
 
                case DELETE_COMMUNITY:
                   PolicyMapSetDeleteCommunityLine sdcLine = (PolicyMapSetDeleteCommunityLine) setLine;
@@ -847,6 +1027,37 @@ public class ConfigurationFactExtractor {
                         + "|" + originType.toString() + "\n");
                   break;
 
+               case LEVEL:
+                  PolicyMapSetLevelLine pmspl = (PolicyMapSetLevelLine) setLine;
+                  IsisLevel level = pmspl.getLevel();
+                  boolean level1 = false;
+                  boolean level2 = false;
+                  switch (level) {
+                  case LEVEL_1:
+                     level1 = true;
+                     break;
+                  case LEVEL_1_2:
+                     level1 = true;
+                     level2 = true;
+                     break;
+                  case LEVEL_2:
+                     level2 = true;
+                     break;
+                  default:
+                     throw new BatfishException("Invalid level");
+                  }
+                  if (level1) {
+                     wSetPolicyMapClauseSetProtocol.append(mapName + "|" + i
+                           + "|" + RoutingProtocol.ISIS_L1.protocolName()
+                           + "\n");
+                  }
+                  if (level2) {
+                     wSetPolicyMapClauseSetProtocol.append(mapName + "|" + i
+                           + "|" + RoutingProtocol.ISIS_L2.protocolName()
+                           + "\n");
+                  }
+                  break;
+
                default:
                   throw new BatfishException("invalid set type");
                }
@@ -878,60 +1089,47 @@ public class ConfigurationFactExtractor {
          List<RouteFilterLine> lines = filter.getLines();
          for (int i = 0; i < lines.size(); i++) {
             RouteFilterLine line = lines.get(i);
-            switch (line.getType()) {
-            case LENGTH_RANGE:
-               RouteFilterLengthRangeLine lrLine = (RouteFilterLengthRangeLine) line;
-               int prefix_length = lrLine.getPrefix().getPrefixLength();
-               Long network_start = lrLine.getPrefix().getAddress().asLong();
-               Long network_end = Util.getNetworkEnd(network_start,
-                     prefix_length);
-               SubRange prefixRange = lrLine.getLengthRange();
-               long min_prefix = prefixRange.getStart();
-               long max_prefix = prefixRange.getEnd();
-               wSetRouteFilterLine.append(filterName + "|" + i + "|"
-                     + network_start + "|" + network_end + "|" + min_prefix
-                     + "|" + max_prefix + "\n");
-               switch (lrLine.getAction()) {
-               case ACCEPT:
-                  wSetRouteFilterPermitLine.append(filterName + "|" + i + "\n");
-                  break;
-
-               case REJECT:
-                  break;
-
-               default:
-                  throw new BatfishException("bad action");
-               }
+            Long network_start = line.getPrefix().getAddress().asLong();
+            Long network_end = line.getPrefix().getEndAddress().asLong();
+            SubRange prefixRange = line.getLengthRange();
+            long min_prefix = prefixRange.getStart();
+            long max_prefix = prefixRange.getEnd();
+            wSetRouteFilterLine.append(filterName + "|" + i + "|"
+                  + network_start + "|" + network_end + "|" + min_prefix + "|"
+                  + max_prefix + "\n");
+            switch (line.getAction()) {
+            case ACCEPT:
+               wSetRouteFilterPermitLine.append(filterName + "|" + i + "\n");
                break;
 
-            case THROUGH:
-               // throw new BatfishException("not implemented");
-               _warnings.add("WARNING: " + filterName + ":" + i
-                     + ": route-filter through not implemented\n");
+            case REJECT:
                break;
 
             default:
-               throw new BatfishException("bad line type");
+               throw new BatfishException("bad action");
             }
-
          }
       }
    }
 
    private void writeRouteReflectorClients() {
       StringBuilder wSetRouteReflectorClient = _factBins
-            .get("SetRouteReflectorClient");
+            .get("SetRouteReflectorClient_flat");
       String hostname = _configuration.getHostname();
       BgpProcess proc = _configuration.getBgpProcess();
       if (proc != null) {
          for (BgpNeighbor neighbor : proc.getNeighbors().values()) {
+            Prefix neighborPrefix = neighbor.getPrefix();
+            long neighborPrefixStart = neighborPrefix.getAddress().asLong();
+            long neighborPrefixEnd = neighborPrefix.getEndAddress().asLong();
+            int neighborPrefixLength = neighborPrefix.getPrefixLength();
             Long clusterId = neighbor.getClusterId();
             if (clusterId == null) {
                continue;
             }
-            Ip neighborIp = neighbor.getAddress();
             wSetRouteReflectorClient.append(hostname + "|"
-                  + neighborIp.asLong() + "|" + clusterId + "\n");
+                  + neighborPrefixStart + "|" + neighborPrefixEnd + "|"
+                  + neighborPrefixLength + "|" + clusterId + "\n");
          }
       }
    }
@@ -954,17 +1152,15 @@ public class ConfigurationFactExtractor {
       StringBuilder wSetIpInt = _factBins.get("SetIpInt");
       for (Interface i : _configuration.getInterfaces().values()) {
          String interfaceName = i.getName();
-         Ip ip = i.getIP();
-         Ip subnetMask = i.getSubnetMask();
-         if (ip != null) {
-            long ipInt = ip.asLong();
-            long subnet = subnetMask.asLong();
-            int prefix_length = subnetMask.numSubnetBits();
-            long network_start = ipInt & subnet;
-            long network_end = Util.getNetworkEnd(network_start, prefix_length);
+         Prefix prefix = i.getPrefix();
+         if (prefix != null) {
+            long address = prefix.getAddress().asLong();
+            int prefix_length = prefix.getPrefixLength();
+            long network_start = prefix.getNetworkAddress().asLong();
+            long network_end = prefix.getEndAddress().asLong();
             wSetNetwork.append(network_start + "|" + network_start + "|"
                   + network_end + "|" + prefix_length + "\n");
-            wSetIpInt.append(hostname + "|" + interfaceName + "|" + ip.asLong()
+            wSetIpInt.append(hostname + "|" + interfaceName + "|" + address
                   + "|" + prefix_length + "\n");
          }
       }
@@ -982,9 +1178,9 @@ public class ConfigurationFactExtractor {
          if (nextHopIp == null) {
             nextHopIp = new Ip(0);
          }
-         int prefix_length = route.getPrefix().getPrefixLength();
+         int prefix_length = prefix.getPrefixLength();
          long network_start = prefix.getAddress().asLong();
-         long network_end = Util.getNetworkEnd(network_start, prefix_length);
+         long network_end = prefix.getEndAddress().asLong();
          int distance = route.getAdministrativeCost();
          int tag = route.getTag();
          String nextHopInt = route.getNextHopInterface();
@@ -1054,7 +1250,7 @@ public class ConfigurationFactExtractor {
 
    private void writeVendor() {
       String hostname = _configuration.getHostname();
-      String vendor = _configuration.getVendor();
+      String vendor = _configuration.getVendor().getVendorString();
       StringBuilder wSetNodeVendor = _factBins.get("SetNodeVendor");
       wSetNodeVendor.append(hostname + "|" + vendor + "\n");
    }

@@ -1,6 +1,7 @@
 package org.batfish.grammar.flatjuniper;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -12,13 +13,19 @@ import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
+import org.batfish.grammar.flatjuniper.FlatJuniperParser.Deactivate_lineContext;
 import org.batfish.grammar.flatjuniper.FlatJuniperParser.Flat_juniper_configurationContext;
 import org.batfish.grammar.flatjuniper.FlatJuniperParser.Set_lineContext;
 import org.batfish.grammar.flatjuniper.FlatJuniperParser.Set_line_tailContext;
 import org.batfish.grammar.flatjuniper.FlatJuniperParser.StatementContext;
 import org.batfish.grammar.flatjuniper.Hierarchy.HierarchyTree.HierarchyPath;
-import org.batfish.main.BatfishException;
-import org.batfish.main.RedFlagBatfishException;
+import org.batfish.common.BatfishException;
+import org.batfish.main.PartialGroupMatchBatfishException;
+import org.batfish.main.UndefinedGroupBatfishException;
+import org.batfish.representation.Ip;
+import org.batfish.representation.Ip6;
+import org.batfish.representation.Prefix;
+import org.batfish.representation.Prefix6;
 
 public class Hierarchy {
 
@@ -240,11 +247,11 @@ public class Hierarchy {
          _root = new HierarchyRootNode();
       }
 
-      private void addGroupPaths(HierarchyChildNode currentGroupNode,
+      private void addGroupPaths(Set_lineContext groupLine,
+            Collection<HierarchyChildNode> currentGroupChildren,
             HierarchyTree masterTree, HierarchyPath path,
             List<ParseTree> lines,
             Flat_juniper_configurationContext configurationContext) {
-         Set_lineContext groupLine = currentGroupNode._line;
          if (groupLine != null) {
             Set_lineContext setLine = new Set_lineContext(configurationContext,
                   -1);
@@ -285,12 +292,11 @@ public class Hierarchy {
             setLineTail.children.add(newStatement);
             lines.add(setLine);
          }
-         for (HierarchyChildNode childNode : currentGroupNode.getChildren()
-               .values()) {
+         for (HierarchyChildNode childNode : currentGroupChildren) {
             HierarchyChildNode newPathNode = childNode.copy();
             path._nodes.add(newPathNode);
-            addGroupPaths(childNode, masterTree, path, lines,
-                  configurationContext);
+            addGroupPaths(childNode._line, childNode.getChildren().values(),
+                  masterTree, path, lines, configurationContext);
             path._nodes.remove(path._nodes.size() - 1);
          }
       }
@@ -377,21 +383,45 @@ public class Hierarchy {
          }
          else {
             appliedWildcards.add(currentPathNode._text);
-            for (HierarchyChildNode destinationTreeNode : destinationTreeRoot._children
-                  .values()) {
-               // if there are no matching children, then we recurse no further
-               if (!destinationTreeNode.isWildcard()
-                     && currentPathNode.matches(destinationTreeNode)) {
-                  newPath._nodes.add(destinationTreeNode);
-                  applyWildcardPath(path, configurationContext, sourceGroup,
-                        destinationTreeNode, startingIndex + 1,
-                        remainingWildcards - 1, appliedWildcards, newPath,
-                        lines);
-                  newPath._nodes.remove(newPath._nodes.size() - 1);
+            if (startingIndex < path._nodes.size() - 1) {
+               for (HierarchyChildNode destinationTreeNode : destinationTreeRoot._children
+                     .values()) {
+                  // if there are no matching children, then we recurse no
+                  // further
+                  if (!destinationTreeNode.isWildcard()
+                        && currentPathNode.matches(destinationTreeNode)) {
+                     newPath._nodes.add(destinationTreeNode);
+                     applyWildcardPath(path, configurationContext, sourceGroup,
+                           destinationTreeNode, startingIndex + 1,
+                           remainingWildcards - 1, appliedWildcards, newPath,
+                           lines);
+                     newPath._nodes.remove(newPath._nodes.size() - 1);
+                  }
                }
             }
             appliedWildcards.remove(appliedWildcards.size() - 1);
          }
+      }
+
+      public boolean containsPathPrefixOf(HierarchyPath path) {
+         Map<String, HierarchyChildNode> currentChildren = _root.getChildren();
+         List<HierarchyChildNode> pathNodes = path._nodes;
+         for (HierarchyChildNode currentPathNode : pathNodes) {
+            HierarchyChildNode treeMatchNode = currentChildren
+                  .get(currentPathNode._text);
+            if (treeMatchNode != null) {
+               if (treeMatchNode.getChildren().size() == 0) {
+                  return true;
+               }
+               else {
+                  currentChildren = treeMatchNode.getChildren();
+               }
+            }
+            else {
+               break;
+            }
+         }
+         return false;
       }
 
       private HierarchyChildNode findExactPathMatchNode(HierarchyPath path) {
@@ -447,25 +477,33 @@ public class Hierarchy {
          HierarchyNode currentGroupNode = _root;
          HierarchyChildNode matchNode = null;
          HierarchyPath partialMatch = new HierarchyPath();
-         for (HierarchyChildNode currentPathNode : path._nodes) {
-            matchNode = currentGroupNode
-                  .getFirstMatchingChildNode(currentPathNode);
-            if (matchNode == null) {
-               String message = "No matching path";
-               if (partialMatch._nodes.size() > 0) {
-                  message += ": Partial path match within applied group: \""
-                        + partialMatch.pathString() + "\"";
-               }
-               throw new RedFlagBatfishException(message);
-            }
-            partialMatch._nodes.add(matchNode);
-            currentGroupNode = matchNode;
+         if (path._nodes.size() == 0) {
+            addGroupPaths(null, _root.getChildren().values(), masterTree, path,
+                  lines, configurationContext);
          }
+         else {
+            for (HierarchyChildNode currentPathNode : path._nodes) {
+               matchNode = currentGroupNode
+                     .getFirstMatchingChildNode(currentPathNode);
+               if (matchNode == null) {
+                  String message = "No matching path";
+                  if (partialMatch._nodes.size() > 0) {
+                     message += ": Partial path match within applied group: \""
+                           + partialMatch.pathString() + "\"";
+                  }
+                  throw new PartialGroupMatchBatfishException(message);
+               }
+               partialMatch._nodes.add(matchNode);
+               currentGroupNode = matchNode;
+            }
 
-         // at this point, matchNode is the node in the group tree whose
-         // children must be added to the main tree with substitutions applied
-         // according to the supplied path
-         addGroupPaths(matchNode, masterTree, path, lines, configurationContext);
+            // at this point, matchNode is the node in the group tree whose
+            // children must be added to the main tree with substitutions
+            // applied
+            // according to the supplied path
+            addGroupPaths(matchNode._line, matchNode.getChildren().values(),
+                  masterTree, path, lines, configurationContext);
+         }
          return lines;
       }
 
@@ -473,17 +511,39 @@ public class Hierarchy {
             HierarchyPath applyPathPath,
             Flat_juniper_configurationContext configurationContext) {
          List<ParseTree> lines = new ArrayList<ParseTree>();
-         List<String> prefixes = getApplyPathPrefixes(applyPathPath);
-         for (String prefix : prefixes) {
-            String prefixWithMask;
-            if (prefix.contains("/")) {
-               prefixWithMask = prefix;
+         List<String> candidatePrefixes = getApplyPathPrefixes(applyPathPath);
+         for (String candidatePrefix : candidatePrefixes) {
+            String finalPrefixStr;
+            boolean ipv6 = candidatePrefix.contains(":");
+            boolean isPrefix = candidatePrefix.contains("/");
+            try {
+               if (isPrefix) {
+                  if (ipv6) {
+                     Prefix6 prefix6 = new Prefix6(candidatePrefix);
+                     finalPrefixStr = prefix6.toString();
+                  }
+                  else {
+                     Prefix prefix = new Prefix(candidatePrefix);
+                     finalPrefixStr = prefix.toString();
+                  }
+               }
+               else {
+                  String candidateAddress;
+                  if (ipv6) {
+                     candidateAddress = new Ip6(candidatePrefix).toString();
+                  }
+                  else {
+                     candidateAddress = new Ip(candidatePrefix).toString();
+                  }
+                  finalPrefixStr = candidateAddress + (ipv6 ? "/64" : "/32");
+               }
             }
-            else {
-               boolean ipv6 = prefix.contains(":");
-               prefixWithMask = prefix + (ipv6 ? "/64" : "/32");
+            catch (BatfishException e) {
+               throw new BatfishException(
+                     "Invalid ip(v6) address or prefix: \"" + candidatePrefix
+                           + "\"", e);
             }
-            basePath.addNode(prefixWithMask);
+            basePath.addNode(finalPrefixStr);
             Set_lineContext setLine = generateSetLine(basePath,
                   configurationContext);
             lines.add(setLine);
@@ -524,12 +584,19 @@ public class Hierarchy {
          return _groupName;
       }
 
+      public void pruneAfterPath(HierarchyPath path) {
+         HierarchyChildNode pathEnd = findExactPathMatchNode(path);
+         pathEnd.getChildren().clear();
+      }
+
       public void setApplyGroupsExcept(HierarchyPath path, String groupName) {
          HierarchyChildNode node = findExactPathMatchNode(path);
          node.addBlacklistedGroup(groupName);
       }
 
    }
+
+   private HierarchyTree _deactivateTree;
 
    private HierarchyTree _masterTree;
 
@@ -538,6 +605,15 @@ public class Hierarchy {
    public Hierarchy() {
       _trees = new HashMap<String, HierarchyTree>();
       _masterTree = new HierarchyTree(null);
+      _deactivateTree = new HierarchyTree(null);
+   }
+
+   public void addDeactivatePath(HierarchyPath path, Deactivate_lineContext ctx) {
+      if (isDeactivated(path)) {
+         return;
+      }
+      _deactivateTree.addPath(path, null, null);
+      _deactivateTree.pruneAfterPath(path);
    }
 
    public void addMasterPath(HierarchyPath path, Set_lineContext ctx) {
@@ -549,8 +625,8 @@ public class Hierarchy {
          Flat_juniper_configurationContext configurationContext) {
       HierarchyTree tree = _trees.get(groupName);
       if (tree == null) {
-         throw new RedFlagBatfishException("No such group: \"" + groupName
-               + "\"");
+         throw new UndefinedGroupBatfishException("No such group: \""
+               + groupName + "\"");
       }
       return tree.getApplyGroupsLines(path, configurationContext, _masterTree);
    }
@@ -568,6 +644,10 @@ public class Hierarchy {
 
    public HierarchyTree getTree(String groupName) {
       return _trees.get(groupName);
+   }
+
+   public boolean isDeactivated(HierarchyPath path) {
+      return _deactivateTree.containsPathPrefixOf(path);
    }
 
    public HierarchyTree newTree(String groupName) {

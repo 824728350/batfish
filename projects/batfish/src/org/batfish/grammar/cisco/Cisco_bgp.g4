@@ -125,6 +125,7 @@ bgp_tail
    | redistribute_static_bgp_tail
    | remove_private_as_bgp_tail
    | route_map_bgp_tail
+   | route_policy_bgp_tail
    | route_reflector_client_bgp_tail
    | router_id_bgp_tail
    | send_community_bgp_tail
@@ -346,6 +347,11 @@ nexus_vrf_rb_stanza
    )*
 ;
 
+no_bgp_enforce_first_as_stanza
+:
+   NO BGP ENFORCE_FIRST_AS NEWLINE
+;
+
 no_neighbor_activate_rb_stanza
 :
    NO NEIGHBOR
@@ -407,6 +413,7 @@ null_bgp_tail
             (
                LISTEN LIMIT
             )
+            | LOG
             | LOG_NEIGHBOR_CHANGES
             | NEXTHOP
          )
@@ -490,6 +497,15 @@ route_map_bgp_tail
    ) NEWLINE
 ;
 
+route_policy_bgp_tail
+:
+   ROUTE_POLICY name = variable
+   (
+      IN
+      | OUT
+   ) NEWLINE
+;
+
 route_reflector_client_bgp_tail
 :
    ROUTE_REFLECTOR_CLIENT NEWLINE
@@ -558,6 +574,7 @@ router_bgp_stanza
       | cluster_id_rb_stanza
       | neighbor_rb_stanza
       | nexus_neighbor_rb_stanza
+      | no_bgp_enforce_first_as_stanza
       | no_neighbor_activate_rb_stanza
       | no_neighbor_shutdown_rb_stanza
       | no_redistribute_connected_rb_stanza

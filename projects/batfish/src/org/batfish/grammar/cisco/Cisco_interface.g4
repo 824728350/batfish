@@ -6,6 +6,11 @@ options {
    tokenVocab = CiscoLexer;
 }
 
+default_gw_if_stanza
+:
+   DEFAULT_GW IP_ADDRESS NEWLINE
+;
+
 description_if_stanza
 :
    description_line
@@ -33,15 +38,18 @@ hsrpc_stanza
 
 if_stanza
 :
-   description_if_stanza
+   default_gw_if_stanza
+   | description_if_stanza
    | ip_access_group_if_stanza
    | ip_address_if_stanza
    | ip_address_secondary_if_stanza
    | ip_ospf_cost_if_stanza
    | ip_ospf_dead_interval_if_stanza
    | ip_ospf_dead_interval_minimal_if_stanza
+   | ip_ospf_hello_interval_if_stanza
    | ip_ospf_passive_interface_if_stanza
    | ip_policy_if_stanza
+   | ip_router_isis_if_stanza
    | isis_circuit_type_if_stanza
    | isis_metric_if_stanza
    | isis_network_if_stanza
@@ -58,6 +66,7 @@ if_stanza
    | switchport_mode_dynamic_desirable_stanza
    | switchport_mode_trunk_stanza
    | vrf_forwarding_if_stanza
+   | vrf_if_stanza
    | vrf_member_if_stanza
 ;
 
@@ -93,7 +102,10 @@ ip_address_hsrpc_stanza
 
 ip_address_if_stanza
 :
-   IP ADDRESS
+   (
+      IP
+      | IPV4
+   ) ADDRESS
    (
       (
          ip = IP_ADDRESS subnet = IP_ADDRESS
@@ -131,6 +143,11 @@ ip_ospf_dead_interval_minimal_if_stanza
    IP OSPF DEAD_INTERVAL MINIMAL HELLO_MULTIPLIER mult = DEC NEWLINE
 ;
 
+ip_ospf_hello_interval_if_stanza
+:
+   IP OSPF HELLO_INTERVAL seconds = DEC NEWLINE
+;
+
 ip_ospf_passive_interface_if_stanza
 :
    NO? IP OSPF PASSIVE_INTERFACE NEWLINE
@@ -139,6 +156,11 @@ ip_ospf_passive_interface_if_stanza
 ip_policy_if_stanza
 :
    IP POLICY ROUTE_MAP name = ~NEWLINE NEWLINE
+;
+
+ip_router_isis_if_stanza
+:
+   IP ROUTER ISIS NEWLINE
 ;
 
 isis_circuit_type_if_stanza
@@ -180,14 +202,19 @@ null_standalone_if_stanza
 :
    NO?
    (
-      ARP
+      AFFINITY
+      | ARP
       | ASYNC
       | ATM
       | AUTO
+      | AUTOROUTE
       | AUTOSTATE
       | BANDWIDTH
       | BEACON
+      | BFD
+      | BUNDLE
       | CABLELENGTH
+      | CARRIER_DELAY
       | CDP
       | CHANNEL
       | CHANNEL_GROUP
@@ -196,8 +223,11 @@ null_standalone_if_stanza
       | CLNS
       | CLOCK
       | COUNTER
+      | CRC
       | CRYPTO
+      | DAMPENING
       | DCBX
+      | DESTINATION
       |
       (
          DSU BANDWIDTH
@@ -205,6 +235,7 @@ null_standalone_if_stanza
       | DUPLEX
       | ENCAPSULATION
       | FAIR_QUEUE
+      | FAST_REROUTE
       | FLOWCONTROL
       | FORWARDER
       | FRAME_RELAY
@@ -247,6 +278,7 @@ null_standalone_if_stanza
                OSPF
                (
                   AUTHENTICATION
+                  | AUTHENTICATION_KEY
                   | MESSAGE_DIGEST_KEY
                   | MTU_IGNORE
                   | NETWORK
@@ -268,6 +300,13 @@ null_standalone_if_stanza
             | VIRTUAL_REASSEMBLY
             | VIRTUAL_ROUTER
             | VRF
+         )
+      )
+      |
+      (
+         IPV4
+         (
+            UNNUMBERED
          )
       )
       | IPV6
@@ -310,9 +349,11 @@ null_standalone_if_stanza
       (
          NTP BROADCAST
       )
+      | PATH_OPTION
       | PEER
       | PHYSICAL_LAYER
       | PORT_CHANNEL
+      | POS
       | POWER
       | PPP
       | PREEMPT
@@ -330,6 +371,8 @@ null_standalone_if_stanza
       | SERIAL
       | SERVICE_MODULE
       | SERVICE_POLICY
+      | SIGNALLED_BANDWIDTH
+      | SIGNALLED_NAME
       | SONET
       | SPANNING_TREE
       | SPEED
@@ -436,10 +479,15 @@ track_hsrpc_stanza
 
 vrf_forwarding_if_stanza
 :
-   VRF FORWARDING name = ~NEWLINE NEWLINE
+   VRF FORWARDING name = variable NEWLINE
+;
+
+vrf_if_stanza
+:
+   VRF name = variable NEWLINE
 ;
 
 vrf_member_if_stanza
 :
-   VRF MEMBER name = ~NEWLINE NEWLINE
+   VRF MEMBER name = variable NEWLINE
 ;

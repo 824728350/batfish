@@ -11,9 +11,25 @@ base_community_regex
    ~( COLON | NEWLINE )+ COLON ~( COLON | NEWLINE )+
 ;
 
-colort_apply_groups
+base_extended_community_regex
 :
-   s_apply_groups
+   ~( COLON | NEWLINE )+ COLON ~( COLON | NEWLINE )+ COLON ~( COLON | NEWLINE
+   )+
+;
+
+color2t_add_color
+:
+   ADD color2 = DEC
+;
+
+color2t_color
+:
+   color2 = DEC
+;
+
+colort_add_color
+:
+   ADD color = DEC
 ;
 
 colort_color
@@ -33,11 +49,19 @@ ct_members
    MEMBERS
    (
       extended_community
-      | named_community
+      | standard_community
       // community_regex intentionally on bottom
 
       | community_regex
+      | extended_community_regex
    )
+;
+
+extended_community_regex
+:
+   (
+      base_extended_community_regex PIPE
+   )* base_extended_community_regex
 ;
 
 fromt_area
@@ -47,7 +71,10 @@ fromt_area
 
 fromt_as_path
 :
-   AS_PATH name = variable
+   AS_PATH
+   (
+      name = variable
+   )?
 ;
 
 fromt_color
@@ -69,9 +96,19 @@ fromt_family
    )
 ;
 
+fromt_instance
+:
+   INSTANCE name = variable
+;
+
 fromt_interface
 :
    INTERFACE id = interface_id
+;
+
+fromt_level
+:
+   LEVEL DEC
 ;
 
 fromt_neighbor
@@ -88,9 +125,14 @@ fromt_null
    PREFIX_LIST_FILTER s_null_filler
 ;
 
+fromt_origin
+:
+   ORIGIN origin_type
+;
+
 fromt_policy
 :
-   POLICY name = variable
+   POLICY expr = policy_expression
 ;
 
 fromt_prefix_list
@@ -101,6 +143,11 @@ fromt_prefix_list
 fromt_protocol
 :
    PROTOCOL protocol = routing_protocol
+;
+
+fromt_rib
+:
+   RIB name = variable
 ;
 
 fromt_route_filter
@@ -115,6 +162,7 @@ fromt_route_filter
 fromt_route_filter_tail
 :
    rft_exact
+   | rft_longer
    | rft_orlonger
    | rft_prefix_length_range
    | rft_through
@@ -128,7 +176,11 @@ fromt_route_filter_then
 
 fromt_route_type
 :
-   ROUTE_TYPE EXTERNAL
+   ROUTE_TYPE
+   (
+      EXTERNAL
+      | INTERNAL
+   )
 ;
 
 fromt_source_address_filter
@@ -148,20 +200,23 @@ fromt_tag
 
 metric_expression
 :
-   MULTIPLIER multiplier = DEC
+   (
+      METRIC
+      | METRIC2
+   ) MULTIPLIER multiplier = DEC
    (
       OFFSET offset = DEC
    )?
 ;
 
-named_community
-:
-   NO_ADVERTISE
-;
-
 plt_apply_path
 :
    APPLY_PATH path = DOUBLE_QUOTED_STRING
+;
+
+plt_ip6
+:
+   ip6 = IPV6_ADDRESS
 ;
 
 plt_network
@@ -197,6 +252,11 @@ pot_community
 pot_community_tail
 :
    ct_members
+;
+
+pot_condition
+:
+   CONDITION s_null_filler
 ;
 
 pot_policy_statement
@@ -239,14 +299,22 @@ pst_term
 
 pst_term_tail
 :
-   tt_apply_groups
+// intentional blank
+
+   | tt_apply_groups
    | tt_from
    | tt_then
+   | tt_to
 ;
 
 rft_exact
 :
    EXACT
+;
+
+rft_longer
+:
+   LONGER
 ;
 
 rft_orlonger
@@ -283,6 +351,7 @@ s_policy_options_tail
    pot_apply_groups
    | pot_as_path
    | pot_community
+   | pot_condition
    | pot_policy_statement
    | pot_prefix_list
 ;
@@ -313,8 +382,21 @@ tht_color
 
 tht_color_tail
 :
-   colort_apply_groups
+   apply
+   | colort_add_color
    | colort_color
+;
+
+tht_color2
+:
+   COLOR2 tht_color2_tail
+;
+
+tht_color2_tail
+:
+   apply
+   | color2t_add_color
+   | color2t_color
 ;
 
 tht_community_add
@@ -352,14 +434,37 @@ tht_external
    EXTERNAL TYPE DEC
 ;
 
+tht_forwarding_class
+:
+   FORWARDING_CLASS variable
+;
+
+tht_install_nexthop
+:
+   INSTALL_NEXTHOP s_null_filler
+;
+
 tht_local_preference
 :
-   LOCAL_PREFERENCE localpref = DEC
+   LOCAL_PREFERENCE
+   (
+      localpref = DEC
+      | s_apply_groups
+   )
 ;
 
 tht_metric
 :
-   METRIC metric = DEC
+   METRIC
+   (
+      metric = DEC
+      | s_apply_groups
+   )
+;
+
+tht_metric_add
+:
+   METRIC ADD metric = DEC
 ;
 
 tht_metric2
@@ -370,6 +475,11 @@ tht_metric2
 tht_metric_expression
 :
    METRIC EXPRESSION metric_expression
+;
+
+tht_metric_igp
+:
+   METRIC IGP offset = DEC?
 ;
 
 tht_metric2_expression
@@ -408,6 +518,15 @@ tht_origin
    ORIGIN IGP
 ;
 
+tht_priority
+:
+   PRIORITY
+   (
+      HIGH
+      | LOW
+   )
+;
+
 tht_reject
 :
    REJECT
@@ -416,6 +535,16 @@ tht_reject
 tht_tag
 :
    TAG DEC
+;
+
+tot_level
+:
+   LEVEL DEC
+;
+
+tot_rib
+:
+   RIB variable
 ;
 
 tt_apply_groups
@@ -435,12 +564,16 @@ tt_from_tail
    | fromt_color
    | fromt_community
    | fromt_family
+   | fromt_instance
    | fromt_interface
+   | fromt_level
    | fromt_neighbor
    | fromt_null
+   | fromt_origin
    | fromt_policy
    | fromt_prefix_list
    | fromt_protocol
+   | fromt_rib
    | fromt_route_filter
    | fromt_route_type
    | fromt_source_address_filter
@@ -458,6 +591,7 @@ tt_then_tail
    | tht_as_path_expand
    | tht_as_path_prepend
    | tht_color
+   | tht_color2
    | tht_community_add
    | tht_community_delete
    | tht_community_set
@@ -465,13 +599,32 @@ tt_then_tail
    | tht_default_action_accept
    | tht_default_action_reject
    | tht_external
+   | tht_forwarding_class
+   | tht_install_nexthop
    | tht_local_preference
    | tht_metric
+   | tht_metric_add
+   | tht_metric_expression
+   | tht_metric_igp
+   | tht_metric2
+   | tht_metric2_expression
    | tht_next_hop
    | tht_next_policy
    | tht_next_term
    | tht_null
    | tht_origin
+   | tht_priority
    | tht_reject
    | tht_tag
+;
+
+tt_to
+:
+   TO tt_to_tail
+;
+
+tt_to_tail
+:
+   tot_level
+   | tot_rib
 ;
