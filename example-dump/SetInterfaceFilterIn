@@ -1,3 +1,0 @@
-NODE|INTERFACE|FILTER
-as2core1|FastEthernet1/0|as2core1:DENYSTUFF
-as2core1|FastEthernet2/0|as2core1:DENYSTUFF
